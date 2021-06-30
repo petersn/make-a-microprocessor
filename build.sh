@@ -4,7 +4,7 @@ set -x
 APP_DIR=.
 
 # Rebuild pkg/*
-wasm-pack build --target web
+wasm-pack build --debug --target web
 
 # Copy the build into the example application.
 mkdir -p $APP_DIR/src/wasm-build

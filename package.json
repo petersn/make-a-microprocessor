@@ -22,7 +22,9 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build"
   },
   "eslintConfig": {
     "extends": [
@@ -45,5 +47,6 @@
   "devDependencies": {
     "@types/codemirror": "^5.60.0",
     "@types/react": "^17.0.11"
-  }
+  },
+  "homepage": "https://peter.website/make-a-microprocessor"
 }

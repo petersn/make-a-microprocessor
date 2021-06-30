@@ -133,12 +133,12 @@ pub fn perform_simulation(description: &[u32], net_count: u32, duration: u32, cl
           components.push(Component::PullResistor{is_pull_down, net});
           i += 3;
         }
-        4 => {
+        /*4 => {
           let address_bit_count = description[i + 1];
           let word_size = description[i + 2];
           
           components.push(Component::PullResistor{is_pull_down, net});
-        }
+        }*/
         _ => panic!("Deserialization failure. Hit: {} at position {} out of length {}", description[i], i, description.len()),
       }
       if i >= description.len() {
@@ -207,6 +207,9 @@ pub fn perform_simulation(description: &[u32], net_count: u32, duration: u32, cl
           }];
           drives[*net as usize] = merge_drives(drives[*net as usize], signal_output);
         }
+        Component::Sram{..} => {
+          
+        }
       }
     }
 
@@ -218,7 +221,9 @@ pub fn perform_simulation(description: &[u32], net_count: u32, duration: u32, cl
         (_, DriveType::ShootThrough) => NetState::ShootThrough,
         (_, DriveType::HighZ) |
         (NetState::Low, DriveType::High) |
-        (NetState::High, DriveType::Low)
+        (NetState::Low, DriveType::WeakHigh) |
+        (NetState::High, DriveType::Low) |
+        (NetState::High, DriveType::WeakLow)
           => NetState::Invalid,
         (NetState::Invalid, DriveType::Low) => NetState::Low,
         (NetState::Invalid, DriveType::High) => NetState::High,

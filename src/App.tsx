@@ -237,18 +237,18 @@ class UnionFind<Key> {
   }
 }
 
-function renderTraces(simResults: ISimResults) {
+function renderTraces(simResults: ISimResults, grading: IGrading) {
   const width = 800;
-  const height = 30 * simResults.probes.length;
+  const height = 30 * (simResults.probes.length + 1);
 
   const svgContents = [];
 
   let probeIndex = 0;
+  const xStep = 5;
 
   for (const probe of simResults.probes) {
     const forwardPass: string[] = [];
     const backwardPass: string[] = [];
-    const xStep = 5;
     let i = 0;
     let shootThroughStart = -1;
     const trace = simResults.netTraces.get(probe.net)!;
@@ -286,24 +286,46 @@ function renderTraces(simResults: ISimResults) {
           fill='rgba(255, 255, 255, 0.3)'
         />
         {
-          shootThroughStart !== -1 &&
-          <path
-            d={`M ${shootThroughStart} 3 L ${width - 3} 3 L ${width - 3} 27 L ${shootThroughStart} 27 Z`}
-            stroke='red'
-            strokeWidth={3}
-            fill='rgba(255, 0, 0, 0.3)'
-          />
+          shootThroughStart !== -1 && <>
+            <path
+              d={`M ${shootThroughStart} 3 L ${shootThroughStart + 110} 3 L ${shootThroughStart + 110} 27 L ${shootThroughStart} 27 Z`}
+              stroke='red'
+              strokeWidth={3}
+              fill='rgba(255, 0, 0, 0.3)'
+            />
+            <text x={shootThroughStart + 5} y={20} stroke='red' fill='red'>Shoot through!</text>
+          </>
         }
       </g>
     );
     probeIndex++;
   }
 
+  const errorX = 143 + xStep * grading.failureTime;
+
   return <svg style={{
-    width, height,
+    width: '100%', height,
   }}>
     {svgContents}
+    {!grading.success && <>
+      <path
+        d={`M ${errorX} 0 L ${errorX} ${height - 20}`}
+        stroke='red'
+        strokeWidth={2}
+        fill='transparent'
+      />
+      <text textAnchor='middle' x={errorX} y={height - 5} stroke='red' fill='red'>{grading.miniMessage}</text>
+    </>}
   </svg>;
+}
+
+function persistLevelState(levelInternalName: string, levelState: ILevelState) {
+  localStorage.setItem('level-' + levelInternalName + '-meta', JSON.stringify(levelState.metadata));
+  localStorage.setItem('level-' + levelInternalName + '-saved-code', levelState.code);
+}
+
+function resetGameState() {
+  localStorage.clear();
 }
 
 interface ILevel {
@@ -311,15 +333,175 @@ interface ILevel {
   name: string;
   levelDesc: string;
   startingCode: string;
+  makeInputNets: (components: EComponent[]) => any[];
+  makeOutputNets: (components: EComponent[]) => any[];
+  gradeResults: (simResults: ISimResults) => IGrading;
+}
+
+function doGrading(
+  simResults: ISimResults,
+  tracesToGrade: { net: string, netName: string, reqs: [number, number][] }[],
+): IGrading {
+  for (const { net, netName, reqs } of tracesToGrade) {
+    const trace = simResults.netTraces.get(net)!;
+    for (const [time, value] of reqs) {
+      if (trace[time] !== value) {
+        const mapping = {0: 'undriven', 1: 'low', 2: 'high'} as any;
+        const got = mapping[trace[time]];
+        const wanted = mapping[value];
+        let message = `${netName} is ${got}, but should have been ${wanted}.`;
+        let miniMessage = `${netName} should be ${wanted}`;
+        return { success: false, failureTime: time, message, miniMessage };
+      }
+    }
+  }
+  return { success: true, failureTime: 0, message: 'All tests passed!', miniMessage: '' };
 }
 
 const globalLevelsList: ILevel[] = [
   {
     internalName: 'fets',
     name: 'FETs',
+    levelDesc: `Welcome to make-a-processor. In each level you must use FETs to construct a circuit that passes the test. The objective for the level will always be in this box.
+
+You construct circuits by writing a "Python" program in the left pane that emits components. You can run your program by hitting ctrl+enter in the code pane. The program's output will appear in the bottom right pane, and the results of the circuit simulation will appear in the top right page.
+
+To get a list of components, and to see how to emit them, open up the components pane.
+
+Your goal in this first level is to use two FETs to drive the \`not_A\` net to be high when \`A\` is low, and vice versa.`,
+    startingCode: `# Your Python code here.
+
+# The nets vdd and gnd are built in, and are always 1 and 0 respectively.
+probe("Power", vdd)
+probe("Ground", gnd)
+
+A, = get_level_inputs()
+not_A, = get_level_outputs()
+
+probe("A", A)
+probe("¬A", not_A)
+
+# Hint:
+# nfet(gate, drain, source)
+# pfet(gate, drain, source)
+`,
+    makeInputNets: (components: EComponent[]) => {
+      components.push(
+        { kind: 'signal', net: '_net_A', pattern: [...'01'] as any, repeat: true },
+      );
+      return ['_net_A'];
+    },
+    makeOutputNets: () => ['_net_not_A'],
+    gradeResults: (simResults: ISimResults) => doGrading(simResults, [
+      {
+        net: '_net_not_A',
+        netName: '¬A',
+        reqs: [[7, 2], [17, 1], [27, 2], [37, 1]],
+      }
+    ]),
+  },
+
+  {
+    internalName: 'highz',
+    name: 'High-Z Output',
+    levelDesc: `A component's output is said to be high Z (high impedance) when it isn't driven by the component. In this level you must construct a gated inverter that takes a second \`output_enable\` signal. Your gated inverter must drive the output if and only if \`output_enable\` is high.
+
+Specifically, your component's truth table must be:
+
+  A | OE | out
+  -------------
+  0 | 0  |  Z
+  1 | 0  |  Z
+  0 | 1  |  1
+  1 | 1  |  0
+`,
+    startingCode: `A, output_enable = get_level_inputs()
+not_A, = get_level_outputs()
+
+probe("Output enable", output_enable)
+probe("A", A)
+probe("¬A", not_A)
+`,
+    makeInputNets: (components: EComponent[]) => {
+      components.push(
+        { kind: 'signal', net: '_net_A',             pattern: [...'z01001010'] as any, repeat: false },
+        { kind: 'signal', net: '_net_output_enable', pattern: [...'000011100'] as any, repeat: false },
+      );
+      return ['_net_A', '_net_output_enable'];
+    },
+    makeOutputNets: () => ['_net_not_A'],
+    gradeResults: (simResults: ISimResults) => doGrading(simResults, [
+      {
+        net: '_net_not_A',
+        netName: '¬A',
+        reqs: [[7, 0], [17, 0], [27, 0], [37, 0], [47, 2], [57, 1], [67, 2], [77, 0]],
+      }
+    ]),
+  },
+
+  {
+    internalName: 'logic_gates',
+    name: 'Logic Gates',
+    levelDesc: `We will now create logic gates. Implement `,
+    startingCode: `
+def not_gate(x):
+    r = new_net()
+    ...
+    return r
+`,
+    makeInputNets: () => ['_net_A', '_net_output_enable'],
+    makeOutputNets: () => ['_net_notA'],
+    gradeResults: (x: any) => ({ success: false, failureTime: 3, message: 'bad', miniMessage: '?' }),
+  },
+  {
+    internalName: 'adder',
+    name: 'Adder',
     levelDesc: `This is the first level.
 To open up the documentation press `,
     startingCode: '# Your code here.\n',
+    makeInputNets: () => ['_net_A', '_net_output_enable'],
+    makeOutputNets: () => ['_net_notA'],
+    gradeResults: (x: any) => ({ success: false, failureTime: 3, message: 'bad', miniMessage: '?' }),
+  },
+  {
+    internalName: 'flipflops',
+    name: 'Flip-Flops',
+    levelDesc: `This is the first level.
+To open up the documentation press `,
+    startingCode: '# Your code here.\n',
+    makeInputNets: () => ['_net_A', '_net_output_enable'],
+    makeOutputNets: () => ['_net_notA'],
+    gradeResults: (x: any) => ({ success: false, failureTime: 3, message: 'bad', miniMessage: '?' }),
+  },
+  {
+    internalName: 'state_machine',
+    name: 'State Machines',
+    levelDesc: `This is the first level.
+To open up the documentation press `,
+    startingCode: '# Your code here.\n',
+    makeInputNets: () => ['_net_A', '_net_output_enable'],
+    makeOutputNets: () => ['_net_notA'],
+    gradeResults: (x: any) => ({ success: false, failureTime: 3, message: 'bad', miniMessage: '?' }),
+  },
+  {
+    internalName: 'sram',
+    name: 'SRAM',
+    levelDesc: `This is the first level.
+To open up the documentation press `,
+    startingCode: '# Your code here.\n',
+    makeInputNets: () => ['_net_A', '_net_output_enable'],
+    makeOutputNets: () => ['_net_notA'],
+    gradeResults: (x: any) => ({ success: false, failureTime: 3, message: 'bad', miniMessage: '?' }),
+  },
+  {
+    internalName: 'microprocessor',
+    name: 'Microprocessor',
+    levelDesc: `This is the first level.
+To open up the documentation press `,
+    startingCode: '# Your code here.\n',
+    makeInputNets: () => ['_net_A', '_net_output_enable'],
+    makeOutputNets: () => ['_net_notA'],
+    gradeResults: (x: any) => ({ success: false, failureTime: 3, message: 'bad', miniMessage: '?' }),
   },
 ];
 
@@ -329,49 +511,72 @@ interface ISimResults {
   netTraces: Map<string, Uint8Array>;
   probes: EProbe[];
   shootThroughOccurred: boolean;
-}
-
-interface IAppState {
-  page: 'level-select' | 'level';
-  currentLevel: string;
-  levelStates: Map<string, ILevelState>;
+  earliestShootThrough: number;
 }
 
 interface ILevelState {
   metadata: {
+    savedVersion: number;
     everOpened: boolean;
     everBeaten: boolean;
   };
   code: string;
+}
+
+interface IGrading {
+  success: boolean;
+  failureTime: number;
+  message: string;
+  miniMessage: string;
+}
+
+interface IAppState {
+  page: 'level-select' | 'level';
+  currentLevel: ILevel;
+  code: string;
   terminalOutput: string;
-  pythonOutput: string;
-  simResult: null | ISimResults;
+  simOutput: string;
+  simResults: null | ISimResults;
+  grading: null | IGrading;
 }
 
 class App extends React.PureComponent<{}, IAppState> {
+  levelStates: Map<string, ILevelState>;
+
   constructor(props: {}) {
     super(props);
-    const levelStates = new Map<string, ILevelState>();
-    for (const level of globalLevelsList) {
-      const metadata = JSON.parse(
-        localStorage.getItem('level-' + level.internalName + '-meta')
-        || '{"everBeaten": false, "everOpened": false}'
-      );
-      const code = localStorage.getItem('level-' + level.internalName + '-saved-code') || level.startingCode;
-      levelStates.set(level.internalName, {
-        metadata,
-        code,
-        terminalOutput: '(Hit ctrl + enter in the code window to rerun.)',
-        pythonOutput: '',
-        simResult: null,
-      });
-    }
+
+    // Load level states from localStorage.
+    this.levelStates = new Map<string, ILevelState>(); // Silence the error.
+    this.loadLevelStatesFromLocalStorage();
 
     this.state = {
       page: 'level-select',
-      currentLevel: '',
-      levelStates,
+      currentLevel: null as unknown as ILevel,
+      code: '',
+      terminalOutput: '',
+      simOutput: '',
+      simResults: null,
+      grading: null,
     };
+
+    window.onpopstate = (event) => {
+      this.setState({
+        page: 'level-select',
+      })
+    };
+  }
+
+  loadLevelStatesFromLocalStorage() {
+    this.levelStates = new Map<string, ILevelState>();
+    for (const level of globalLevelsList) {
+      const metadata = JSON.parse(
+        localStorage.getItem('level-' + level.internalName + '-meta')
+        || '{"savedVersion": 1, "everBeaten": false, "everOpened": false}'
+      );
+      const code = localStorage.getItem('level-' + level.internalName + '-saved-code') || level.startingCode;
+      this.levelStates.set(level.internalName, { metadata, code });
+    }
   }
 
   reportError(lineNum: number, message: string) {
@@ -443,20 +648,20 @@ class App extends React.PureComponent<{}, IAppState> {
             netIndices.get(component.source)!,
           );
           break;
-        case 'pull_resistor':
-          descArray.push(
-            2,
-            {'up': 0, 'down': 1}[component.direction],
-            netIndices.get(component.net)!,
-          );
-          break;
         case 'signal':
           descArray.push(
-            3,
+            2,
             netIndices.get(component.net)!,
             +component.repeat,
             component.pattern.length,
             ...[...component.pattern].map((c) => ({'0': 0, '1': 1, 'z': 2}[c])),
+          );
+          break;
+        case 'pull_resistor':
+          descArray.push(
+            3,
+            {'up': 0, 'down': 1}[component.direction],
+            netIndices.get(component.net)!,
           );
           break;
         default:
@@ -465,17 +670,23 @@ class App extends React.PureComponent<{}, IAppState> {
       descArray.push(123456789);
     }
     const desc = new Uint32Array(descArray);
-    const traceValues = perform_simulation(desc, netIndices.size, 100, 10);
+    const traceValues = perform_simulation(desc, netIndices.size, 400, 10);
     const traceIndices = get_indices();
     const traces: Uint8Array[] = [];
     let shootThroughOccurred = false;
+    let earliestShootThrough = Infinity;
     for (let i = 0; i < traceIndices.length; i += 2) {
       const start = traceIndices[i];
       const len = traceIndices[i + 1];
       const trace = traceValues.slice(start, start + len);
-      for (const v of trace)
-        if (v == 3)
+      let t = 0;
+      for (const v of trace) {
+        if (v == 3) {
           shootThroughOccurred = true;
+          earliestShootThrough = Math.min(earliestShootThrough, t);
+        }
+        t++;
+      }
       traces.push(trace);
     }
 
@@ -484,14 +695,33 @@ class App extends React.PureComponent<{}, IAppState> {
       netTraces.set(net, traces[netIndices.get(net)!]);
 
     let simOutput = `Components: ${components.length - 2}  Nets: ${nets.size}`;
-    const simResult: ISimResults = {
+    const simResults: ISimResults = {
       components: components.length,
       nets: [...nets],
       netTraces,
       probes,
       shootThroughOccurred,
+      earliestShootThrough,
     };
-    this.setState({ components, simOutput, simResult });
+
+    const grading: IGrading = shootThroughOccurred ?
+      {
+        success: false,
+        failureTime: earliestShootThrough,
+        message: 'Shoot through (shorting vdd to gnd) is never allowed.',
+        miniMessage: 'Shoot through occurs here',
+      }
+      : this.state.currentLevel.gradeResults(simResults);
+
+    if (grading.success) {
+      const levelState = this.levelStates.get(this.state.currentLevel.internalName)!;
+      levelState.metadata.everBeaten = true;
+      persistLevelState(this.state.currentLevel.internalName, levelState);
+    } else {
+      simOutput += '\n\nLEVEL FAILED: ' + grading.message;
+    }
+
+    this.setState({ simOutput, simResults, grading });
   }
 
   onCompile = (code: string) => {
@@ -525,6 +755,9 @@ class App extends React.PureComponent<{}, IAppState> {
       source = Sk.ffi.remapToJs(source);
       if (source === undefined)
         source = 'gnd';
+      if (typeof gate !== 'string') throw 'nfet(gate, drain, source) gate argument must be net';
+      if (typeof drain !== 'string') throw 'nfet(gate, drain, source) drain argument must be net';
+      if (typeof source !== 'string') throw 'nfet(gate, drain, source) source argument must be net';
       components.push({ kind: 'fet', isPfet: false, gate, drain, source });
     };
     Sk.builtins.nfet.co_varnames = ['gate', 'drain', 'source'];
@@ -539,6 +772,9 @@ class App extends React.PureComponent<{}, IAppState> {
       source = Sk.ffi.remapToJs(source);
       if (source === undefined)
         source = 'vdd';
+      if (typeof gate !== 'string') throw 'pfet(gate, drain, source) gate argument must be net';
+      if (typeof drain !== 'string') throw 'pfet(gate, drain, source) drain argument must be net';
+      if (typeof source !== 'string') throw 'pfet(gate, drain, source) source argument must be net';
       components.push({ kind: 'fet', isPfet: true, gate, drain, source });
     };
     Sk.builtins.pfet.co_varnames = ['gate', 'drain', 'source'];
@@ -548,6 +784,8 @@ class App extends React.PureComponent<{}, IAppState> {
     Sk.builtins.probe = (label: string, net: any) => {
       label = Sk.ffi.remapToJs(label);
       net = Sk.ffi.remapToJs(net);
+      if (typeof label !== 'string') throw 'probe(label, net) label argument must be string';
+      if (typeof net !== 'string') throw 'probe(label, net) net argument must be string';
       components.push({ kind: 'probe', label, net });
     };
     Sk.builtins.probe.co_varnames = ['label', 'net'];
@@ -555,6 +793,7 @@ class App extends React.PureComponent<{}, IAppState> {
 
     Sk.builtins.pull_down_resistor = (net: any) => {
       net = Sk.ffi.remapToJs(net);
+      if (typeof net !== 'string') throw 'pull_down_resistor(net) net argument must be string';
       components.push({ kind: 'pull_resistor', direction: 'down', net });
     };
     Sk.builtins.pull_down_resistor.co_varnames = ['net'];
@@ -562,18 +801,23 @@ class App extends React.PureComponent<{}, IAppState> {
 
     Sk.builtins.pull_up_resistor = (net: any) => {
       net = Sk.ffi.remapToJs(net);
+      if (typeof net !== 'string') throw 'pull_up_resistor(net) net argument must be string';
       components.push({ kind: 'pull_resistor', direction: 'up', net });
     };
     Sk.builtins.pull_up_resistor.co_varnames = ['net'];
     Sk.builtins.pull_up_resistor.co_numargs = 1;
 
-    Sk.builtins.wire_together = (nets: any) => {
-      nets = Sk.ffi.remapToJs(nets);
-      components.push({ kind: 'wire', nets });
+    Sk.builtins.wire_together = (net1: any, net2: any) => {
+      net1 = Sk.ffi.remapToJs(net1);
+      net2 = Sk.ffi.remapToJs(net2);
+      if (typeof net1 !== 'string') throw 'wire_together(net1, net2) net1 argument must be string';
+      if (typeof net2 !== 'string') throw 'wire_together(net1, net2) net2 argument must be string';
+      components.push({ kind: 'wire', nets: [net1, net2] });
     };
-    Sk.builtins.wire_together.co_varnames = ['nets'];
-    Sk.builtins.wire_together.co_numargs = 1;
+    Sk.builtins.wire_together.co_varnames = ['net1', 'net2'];
+    Sk.builtins.wire_together.co_numargs = 2;
 
+    /*
     Sk.builtins.button = () => {
       const net = 'button' + getId();
       components.push({ kind: 'button', net });
@@ -581,6 +825,7 @@ class App extends React.PureComponent<{}, IAppState> {
     };
     Sk.builtins.button.co_varnames = [];
     Sk.builtins.button.co_numargs = 0;
+    */
 
     Sk.builtins.signal = (pattern: any, name: any) => {
       const net = Sk.ffi.remapToJs(name) + getId();
@@ -599,6 +844,20 @@ class App extends React.PureComponent<{}, IAppState> {
     Sk.builtins.signal.co_varnames = ['desc', 'name'];
     Sk.builtins.signal.$defaults = [undefined, 'signal'];
     Sk.builtins.signal.co_numargs = 2;
+
+    Sk.builtins.get_level_inputs = () => {
+      const nets = this.state.currentLevel.makeInputNets(components);
+      return Sk.ffi.remapToPy(nets);
+    };
+    Sk.builtins.get_level_inputs.co_varnames = [];
+    Sk.builtins.get_level_inputs.co_numargs = 0;
+
+    Sk.builtins.get_level_outputs = () => {
+      const nets = this.state.currentLevel.makeOutputNets(components);
+      return Sk.ffi.remapToPy(nets);
+    };
+    Sk.builtins.get_level_outputs.co_varnames = [];
+    Sk.builtins.get_level_outputs.co_numargs = 0;
 
     Sk.configure({
       output: (obj: any) => {
@@ -623,60 +882,105 @@ class App extends React.PureComponent<{}, IAppState> {
     );
   }
 
-  oldOnCompile(code: string) {
-    const lines = code.split('\n');
-    let lineNum = 0;
-    const components: any[] = [];
-    for (let line of lines) {
-      lineNum++;
-      line = line.split('//')[0];
-      if (line.length === 0)
-        continue;
-      const comp = line.split(/ +/);
-      if (comp[0] === 'nfet' || comp[0] === 'pfet') {
-        if (comp.length !== 4)
-          return this.reportError(lineNum, 'FET must take three arguments: nfet/pfet gate drain source');
-        components.push({ kind: comp[0], gate: comp[1], drain: comp[2], source: comp[3] });
-      } else if (comp[0] === 'probe' || comp[0] === 'wire') {
-        if (comp.length === 1)
-          return this.reportError(lineNum, `${comp[0]} takes a list of nets to monitor, like: ${comp[0]} net0 net1 net2...`);
-        components.push({ kind: comp[0], nets: comp.slice(1) });
-      } else if (comp[0] === 'button') {
-        if (comp.length !== 2)
-          return this.reportError(lineNum, `button takes a single output net, like: button net`);
-        components.push({ kind: 'button', net: comp[1] })
-      } else if (comp[0] === 'signal') {
-        if (comp.length !== 3)
-          return this.reportError(lineNum, 'signal takes a net and a description of the signal, like: signal clock 01... \nThe signal must be made of 0s and 1s, and may optionally end with ... to indicate that the signal should repeat.');
-        const repeat = comp[2].endsWith('...');
-        if (repeat)
-          comp[2] = comp[2].slice(0, -3);
-        for (const c of comp[2])
-          if (c !== '0' && c !== '1')
-            return this.reportError(lineNum, 'The signal must be made of 0s and 1s, and may optionally end with ... to indicate that the signal should repeat.');
-        components.push({ kind: 'signal', repeat, signal: comp[2], net: comp[1] });
-      } else {
-        return this.reportError(lineNum, `Invalid component: ${comp[0]} (must be one of: nfet, pfet, probe, wire, button, signal)`);
-      }
-    }
-    this.simulate(components);
+  switchToLevel(level: ILevel) {
+    this.setState({
+      page: 'level',
+      currentLevel: level,
+      code: this.levelStates.get(level.internalName)!.code,
+      terminalOutput: '(Hit ctrl + enter in the code window to rerun.)',
+      simOutput: '',
+      simResults: null,
+    });
+
+    const levelState = this.levelStates.get(level.internalName)!;
+    levelState.metadata.everOpened = true;
+    persistLevelState(level.internalName, levelState);
+
+    window.history.pushState({page: 'level', currentLevel: level.internalName}, 'Make a Microprocessor');
   }
 
   render() {
     if (this.state.page === 'level-select') {
+      var locked = false;
+
       return <div style={{
         width: '100%',
         height: '100vh',
-        background: '#333',
         color: 'white',
         fontFamily: 'monospace',
-        fontSize: '200%',
         display: 'flex',
+        justifyContent: 'center',
+        textAlign: 'center',
+        fontSize: '150%',
       }}>
         <div style={{
-          
+          marginTop: 30,
         }}>
-          This is some content.
+          <span style={{fontSize: '200%'}}>Make a Processor</span><br/>
+          <br/>
+          Select a level:
+          <div style={{ display: 'flex', flexDirection: 'column', marginTop: 20 }}>
+            {globalLevelsList.map((level, i) => {
+              const levelState = this.levelStates.get(level.internalName)!;
+
+              const result = <div
+                key={i}
+                style={{
+                  fontSize: '150%',
+                  margin: 10,
+                  padding: 10,
+                  width: 300,
+                  position: 'relative',
+                }}
+                className={locked ? 'lockedButton' : 'hoverButton'}
+                onClick={locked ? () => null : () => this.switchToLevel(level)}
+              >
+                {locked ? '???' : level.name}
+                {!locked && !levelState.metadata.everOpened && <div style={{
+                  position: 'absolute',
+                  fontSize: '80%',
+                  color: 'red',
+                  left: '92%',
+                  top: '0%',
+                  transform: 'rotate(30deg)',
+                }}>
+                  New!
+                </div>}
+                {levelState.metadata.everBeaten && <div style={{
+                  position: 'absolute',
+                  fontSize: '300%',
+                  color: 'green',
+                  left: '100%',
+                  top: '50%',
+                  transform: 'translate(-50%, -50%)',
+                }}>
+                  ✓
+                </div>}
+              </div>;
+
+              if (!levelState.metadata.everBeaten)
+                locked = true;
+
+              return result;
+            })}
+          </div>
+        </div>
+
+        <div style={{ position: 'absolute', left: 10, bottom: 10 }}>
+          By Peter Schmidt-Nielsen
+        </div>
+        <div
+          style={{ position: 'absolute', right: 10, bottom: 10, padding: 10 }}
+          className='hoverButton'
+          onClick={() => {
+            if (window.confirm('Are you sure you want to completely reset the game state, including throwing away all of your code?')) {
+              resetGameState();
+              this.loadLevelStatesFromLocalStorage();
+              this.forceUpdate();
+            }
+          }}
+        >
+          Reset Entire Game State
         </div>
       </div>;
     }
@@ -692,7 +996,10 @@ class App extends React.PureComponent<{}, IAppState> {
           onCompile(this.state.code);
         },
         'Ctrl-S': (cm: any) => {
-
+          const levelState = this.levelStates.get(this.state.currentLevel.internalName)!;
+          levelState.code = this.state.code;
+          persistLevelState(this.state.currentLevel.internalName, levelState);
+          this.forceUpdate();
         },
         /*'Tab': (cm: any) => {
           cm.replaceSelection('  ', 'end');
@@ -724,15 +1031,27 @@ class App extends React.PureComponent<{}, IAppState> {
         onChange={(size) => localStorage.setItem('split1', size.toString())}
         resizerStyle={vertResizeStyle}
       >
-        <div>
+        <div style={{ position: 'relative' }}>
           <ControlledCodeMirror
             value={this.state.code}
             options={codeMirrorOptions(this.onCompile)}
             onBeforeChange={(editor, data, code) => {
-              localStorage.setItem('code', code);
               this.setState({ code });
             }}
           />
+          {this.state.code !== this.levelStates.get(this.state.currentLevel.internalName)!.code &&
+            <div style={{
+              position: 'absolute',
+              right: '5%',
+              bottom: '5%',
+              userSelect: 'none',
+              zIndex: 5,
+              color: 'red',
+              opacity: 0.5,
+            }}>
+                ⬤ Unsaved
+            </div>
+          }
         </div>
 
         <div>
@@ -752,9 +1071,9 @@ class App extends React.PureComponent<{}, IAppState> {
             }}>
               <div style={{ margin: 10 }}>
                 {/*
-                {this.state.simResult !== null && <>
+                {this.state.simResults !== null && <>
                   <Collapsible trigger='Nets' transitionTime={100}>
-                    {[...this.state.simResult.nets].map((net: any) =>
+                    {[...this.state.simResults.nets].map((net: any) =>
                       <div key={net}>
                         {net}: 1234
                       </div>
@@ -763,34 +1082,55 @@ class App extends React.PureComponent<{}, IAppState> {
                 </>}
                 */}
 
-                {this.state.simResult !== null &&
+                {this.state.simResults !== null &&
                   /*
-                  this.state.simResult.probes.map((probeName) =>
+                  this.state.simResults.probes.map((probeName) =>
                     <div key={probeName} style={{display: 'flex', justifyContent: 'center', alignContent: 'center', alignItems: 'center'}}>
                       <div>{probeName}:</div>
-                      {renderTrace(this.state.simResult!.netTraces.get(probeName)!)}
+                      {renderTrace(this.state.simResults!.netTraces.get(probeName)!)}
                     </div>
                   )*/
-                  renderTraces(this.state.simResult)
+                  renderTraces(this.state.simResults, this.state.grading!)
                 }
               </div>
             </div>
 
             <div style={{
               backgroundColor: '#222',
-              whiteSpace: 'pre-wrap',
               color: 'white',
               fontFamily: 'monospace',
               width: '100%',
               height: '100%',
-              padding: 10,
+              display: 'flex',
             }}>
-              {this.state.terminalOutput}
-              {'\n\n' + this.state.simOutput}
+              <div style={{ margin: 10, width: 400 }}>
+                <b>{this.state.currentLevel.name}</b>
+                <p style={{whiteSpace: 'pre-wrap'}}>
+                  {this.state.currentLevel.levelDesc}
+                </p>
+              </div>
+              <div
+                style={{ width: 2, backgroundColor: '#555' }}
+              />
+              <div style={{
+                margin: 10,
+                whiteSpace: 'pre-wrap',
+                color: 'white',
+              }}>
+                {this.state.terminalOutput}
+                <span style={{color: 'red'}}>{'\n\n' + this.state.simOutput}</span>
+              </div>
             </div>
           </SplitPane>
         </div>
       </SplitPane>
+
+      {/* Menu bar */}
+      <div style={{
+        width: 100,
+      }}>
+        asdf
+      </div>
     </div>;
   }
 }

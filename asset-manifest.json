@@ -1,25 +1,25 @@
 {
   "files": {
-    "main.css": "/make-a-microprocessor/static/css/main.d17723a3.chunk.css",
-    "main.js": "/make-a-microprocessor/static/js/main.58ff3378.chunk.js",
-    "main.js.map": "/make-a-microprocessor/static/js/main.58ff3378.chunk.js.map",
-    "runtime-main.js": "/make-a-microprocessor/static/js/runtime-main.a81be354.js",
-    "runtime-main.js.map": "/make-a-microprocessor/static/js/runtime-main.a81be354.js.map",
+    "main.css": "/make-a-microprocessor/static/css/main.8943aa04.chunk.css",
+    "main.js": "/make-a-microprocessor/static/js/main.396a9663.chunk.js",
+    "main.js.map": "/make-a-microprocessor/static/js/main.396a9663.chunk.js.map",
+    "runtime-main.js": "/make-a-microprocessor/static/js/runtime-main.e5d974d6.js",
+    "runtime-main.js.map": "/make-a-microprocessor/static/js/runtime-main.e5d974d6.js.map",
     "static/css/2.3f3250e8.chunk.css": "/make-a-microprocessor/static/css/2.3f3250e8.chunk.css",
-    "static/js/2.381663eb.chunk.js": "/make-a-microprocessor/static/js/2.381663eb.chunk.js",
-    "static/js/2.381663eb.chunk.js.map": "/make-a-microprocessor/static/js/2.381663eb.chunk.js.map",
-    "static/js/3.6b6ae4cc.chunk.js": "/make-a-microprocessor/static/js/3.6b6ae4cc.chunk.js",
-    "static/js/3.6b6ae4cc.chunk.js.map": "/make-a-microprocessor/static/js/3.6b6ae4cc.chunk.js.map",
+    "static/js/2.d7bce366.chunk.js": "/make-a-microprocessor/static/js/2.d7bce366.chunk.js",
+    "static/js/2.d7bce366.chunk.js.map": "/make-a-microprocessor/static/js/2.d7bce366.chunk.js.map",
+    "static/js/3.dac61090.chunk.js": "/make-a-microprocessor/static/js/3.dac61090.chunk.js",
+    "static/js/3.dac61090.chunk.js.map": "/make-a-microprocessor/static/js/3.dac61090.chunk.js.map",
     "index.html": "/make-a-microprocessor/index.html",
     "static/css/2.3f3250e8.chunk.css.map": "/make-a-microprocessor/static/css/2.3f3250e8.chunk.css.map",
-    "static/css/main.d17723a3.chunk.css.map": "/make-a-microprocessor/static/css/main.d17723a3.chunk.css.map",
-    "static/js/2.381663eb.chunk.js.LICENSE.txt": "/make-a-microprocessor/static/js/2.381663eb.chunk.js.LICENSE.txt"
+    "static/css/main.8943aa04.chunk.css.map": "/make-a-microprocessor/static/css/main.8943aa04.chunk.css.map",
+    "static/js/2.d7bce366.chunk.js.LICENSE.txt": "/make-a-microprocessor/static/js/2.d7bce366.chunk.js.LICENSE.txt"
   },
   "entrypoints": [
-    "static/js/runtime-main.a81be354.js",
+    "static/js/runtime-main.e5d974d6.js",
     "static/css/2.3f3250e8.chunk.css",
-    "static/js/2.381663eb.chunk.js",
-    "static/css/main.d17723a3.chunk.css",
-    "static/js/main.58ff3378.chunk.js"
+    "static/js/2.d7bce366.chunk.js",
+    "static/css/main.8943aa04.chunk.css",
+    "static/js/main.396a9663.chunk.js"
   ]
 }

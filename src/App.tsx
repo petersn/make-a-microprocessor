@@ -395,13 +395,13 @@ const globalLevelsList: ILevel[] = [
   {
     internalName: 'fets',
     name: 'FETs',
-    levelDesc: `Welcome to make-a-processor. In each level you must use FETs to construct a circuit that passes the test. The objective for the level will always be in this box.
+    levelDesc: `Welcome to make-a-microprocessor, where you use FETs to solve a series of puzzles.
 
-You construct circuits by writing a "Python" program in the left pane that calls functions to make all the components. You can run your program by hitting ctrl+enter in the code pane. The program's output will appear in the bottom right pane, and the results of the circuit simulation will appear in the top right page.
+Write your "Python" program in the left pane, calling functions to make electrical components. Run your program by hitting ctrl + enter in the code pane.
 
-To get a list of components and to see how to construct them, open up the parts list clicking on the "Parts List" button in the top left.
+To get a list of electrical components and code to construct them click on the "Parts List" button in the top left.
 
-Your goal in this first level is to use two FETs to drive the \`not_A\` net to be high when \`A\` is low, and vice versa.`,
+Your goal in this first level is to use two FETs to drive the \`not_A\` net to be high when \`A\` is low, and vice versa (an inverter/not gate).`,
     startingCode: `# Your Python code here.
 
 # The nets vdd and gnd are built in, and are always 1 and 0 respectively.
@@ -414,7 +414,7 @@ not_A, = get_level_outputs()
 probe("A", A)
 probe("¬A", not_A)
 
-# First hint:
+# Hint:
 # nfet(gate, drain, source)
 # pfet(gate, drain, source)
 `,
@@ -1140,7 +1140,7 @@ class App extends React.PureComponent<{}, IAppState> {
         </div>
 
         <div style={{ position: 'absolute', left: 10, bottom: 10 }}>
-          By Peter Schmidt-Nielsen (v0.2)
+          By Peter Schmidt-Nielsen (v0.3)
         </div>
         <div
           style={{ position: 'absolute', right: 10, bottom: 10, padding: 10 }}
@@ -1402,9 +1402,6 @@ class App extends React.PureComponent<{}, IAppState> {
     drive drain low`
               }</pre>
               If the source argument is omitted it defaults to <code>gnd</code> (always low).
-              There is no modeled body diode, so the FET simply does nothing (doesn't conduct) if source is high and drain is low.
-              Additionally, no gate capacitance is modeled — all nets that aren't driven return to a floating state which doesn't switch FETs on.
-
               Examples:
               <pre style={{ marginLeft: 20 }}>{
 `# Pulls \`output\` down whenever \`gate\` is high.
@@ -1413,12 +1410,15 @@ nfet(gate, output, gnd)
 # This is equivalent to the above, as gnd is implicit.
 nfet(gate, output)
 
-# Here the two nfets are wired in series, and \`output\`
-# is pulled down when both \`gate1\` and \`gate2\` are high.
+# Here two nfets are wired in series. Thus, \`output\` is
+# pulled down when both \`gate1\` and \`gate2\` are high.
 intermediate = new_net()
 nfet(gate1, intermediate)
 nfet(gate2, output, intermediate)`
               }</pre>
+
+              There is no modeled body diode, so the FET simply does nothing (doesn't conduct) if source is high and drain is low.
+              Additionally, no gate capacitance is modeled — all nets that aren't driven return to a floating state which doesn't switch FETs on.
             </div>
 
             <pre style={{ fontWeight: 'bold', fontSize: '120%' }}>pfet(gate: Net, drain: Net, source: Optional[Net])</pre>

@@ -601,6 +601,8 @@ for n1, n2 in zip(output_nets, result):
       { net: '_net_sum2', netName: '(A + B)[2]', reqs: reqSeq('xx0xx0xx0xx0') },
     ]),
   },
+
+  // ============================== Flip-Flops ==============================
   {
     internalName: 'flipflops',
     name: 'Flip-Flops',

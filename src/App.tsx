@@ -1140,7 +1140,7 @@ class App extends React.PureComponent<{}, IAppState> {
         </div>
 
         <div style={{ position: 'absolute', left: 10, bottom: 10 }}>
-          By Peter Schmidt-Nielsen (v0.3)
+          By Peter Schmidt-Nielsen (v0.2b)
         </div>
         <div
           style={{ position: 'absolute', right: 10, bottom: 10, padding: 10 }}

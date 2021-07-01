@@ -293,7 +293,7 @@ function renderTraces(simResults: ISimResults, grading: IGrading) {
               strokeWidth={3}
               fill='rgba(255, 0, 0, 0.3)'
             />
-            <text x={shootThroughStart + 5} y={20} stroke='red' fill='red'>Shoot through!</text>
+            <text x={shootThroughStart + 55} y={20} textAnchor='middle' stroke='red' fill='red'>Shoot through!</text>
           </>
         }
       </g>
@@ -302,6 +302,18 @@ function renderTraces(simResults: ISimResults, grading: IGrading) {
   }
 
   const errorX = 143 + xStep * grading.failureTime;
+
+  const gridLines = [];
+  for (let t = 11; t < 400; t += 10) {
+    gridLines.push(
+      <path
+        d={`M ${143 + xStep * t} 0 l 0 ${height - 30}`}
+        stroke='rgba(255, 255, 255, 0.2)'
+        strokeWidth={2}
+        fill='transparent'
+      />
+    );
+  }
 
   return <svg style={{
     width: '100%', height,
@@ -316,6 +328,7 @@ function renderTraces(simResults: ISimResults, grading: IGrading) {
       />
       <text textAnchor='middle' x={errorX} y={height - 5} stroke='red' fill='red'>{grading.miniMessage}</text>
     </>}
+    {gridLines}
   </svg>;
 }
 
@@ -345,6 +358,8 @@ function doGrading(
   for (const { net, netName, reqs } of tracesToGrade) {
     const trace = simResults.netTraces.get(net)!;
     for (const [time, value] of reqs) {
+      if (value == -1)
+        continue;
       if (trace[time] !== value) {
         const mapping = {0: 'undriven', 1: 'low', 2: 'high'} as any;
         const got = mapping[trace[time]];
@@ -358,15 +373,33 @@ function doGrading(
   return { success: true, failureTime: 0, message: 'All tests passed!', miniMessage: '' };
 }
 
+function reqSeq(s: string): [number, number][] {
+  const result: [number, number][] = [];
+  let t = 8;
+  for (const c of s) {
+    if (c === 'z')
+      result.push([t, 0]);
+    else if (c === '0')
+      result.push([t, 1]);
+    else if (c === '1')
+      result.push([t, 2]);
+    else if (c === 'x')
+      result.push([t, -1]);
+    t += 10;
+  }
+  return result;
+}
+
 const globalLevelsList: ILevel[] = [
+  // ============================== FETs ==============================
   {
     internalName: 'fets',
     name: 'FETs',
     levelDesc: `Welcome to make-a-processor. In each level you must use FETs to construct a circuit that passes the test. The objective for the level will always be in this box.
 
-You construct circuits by writing a "Python" program in the left pane that emits components. You can run your program by hitting ctrl+enter in the code pane. The program's output will appear in the bottom right pane, and the results of the circuit simulation will appear in the top right page.
+You construct circuits by writing a "Python" program in the left pane that calls functions to make all the components. You can run your program by hitting ctrl+enter in the code pane. The program's output will appear in the bottom right pane, and the results of the circuit simulation will appear in the top right page.
 
-To get a list of components, and to see how to emit them, open up the components pane.
+To get a list of components and to see how to construct them, open up the parts list clicking on the "Parts List" button in the top left.
 
 Your goal in this first level is to use two FETs to drive the \`not_A\` net to be high when \`A\` is low, and vice versa.`,
     startingCode: `# Your Python code here.
@@ -381,7 +414,7 @@ not_A, = get_level_outputs()
 probe("A", A)
 probe("¬A", not_A)
 
-# Hint:
+# First hint:
 # nfet(gate, drain, source)
 # pfet(gate, drain, source)
 `,
@@ -393,14 +426,11 @@ probe("¬A", not_A)
     },
     makeOutputNets: () => ['_net_not_A'],
     gradeResults: (simResults: ISimResults) => doGrading(simResults, [
-      {
-        net: '_net_not_A',
-        netName: '¬A',
-        reqs: [[7, 2], [17, 1], [27, 2], [37, 1]],
-      }
+      { net: '_net_not_A', netName: '¬A', reqs: reqSeq('1010') },
     ]),
   },
 
+  // ============================== High-Z Output ==============================
   {
     internalName: 'highz',
     name: 'High-Z Output',
@@ -421,6 +451,12 @@ not_A, = get_level_outputs()
 probe("Output enable", output_enable)
 probe("A", A)
 probe("¬A", not_A)
+
+# Hint: You can create your own signals for testing purposes.
+test_signal = signal("001z10...")
+probe("Test signal", test_signal)
+
+# You might also want to check out new_net() and wire_together(net1, net2) in the Parts List.
 `,
     makeInputNets: (components: EComponent[]) => {
       components.push(
@@ -431,37 +467,139 @@ probe("¬A", not_A)
     },
     makeOutputNets: () => ['_net_not_A'],
     gradeResults: (simResults: ISimResults) => doGrading(simResults, [
-      {
-        net: '_net_not_A',
-        netName: '¬A',
-        reqs: [[7, 0], [17, 0], [27, 0], [37, 0], [47, 2], [57, 1], [67, 2], [77, 0]],
-      }
+      { net: '_net_not_A', netName: '¬A', reqs: reqSeq('zzzz101z') },
     ]),
   },
 
+  // ============================== Logic Gates ==============================
   {
     internalName: 'logic_gates',
     name: 'Logic Gates',
-    levelDesc: `We will now create logic gates. Implement `,
+    levelDesc: `We will now create logic gates. Implement each of the listed gate functions.
+
+These definitions will be extremely useful, so you may wish to copy some or all of them to later levels as well.
+
+All your logic gate implementations must drive their output even if an input is undriven (high Z) so long as the other input(s) are sufficient to determine the output. For example, your AND implementation must drive the output low if one input is low and the other is undriven.
+
+Do not worry if your gate implementations produce garbage outputs for a small amount of time after their inputs switch. This is a normal part of combinational logic, and is known as the propagation delay. Some nomenclature:
+
+  Propagation delay: Max time from an input change to output stabilizing.
+  Contamination delay: Min time from an input change to output change.`,
     startingCode: `
 def not_gate(x):
     r = new_net()
     ...
     return r
+
+def nand_gate(x, y):
+    r = new_net()
+    ...
+    return r
+
+def and_gate(x, y):
+    r = new_net()
+    ...
+    return r
+
+def or_gate(x, y):
+    r = new_net()
+    ...
+    return r
+
+def xor_gate(x, y):
+    r = new_net()
+    ...
+    return r
+
+def mux_gate(select, x, y):
+    r = new_net()
+    ...
+    return r
+
+A, B, C = get_level_inputs()
+not_out, nand_out, and_out, or_out, xor_out, mux_out = get_level_outputs()
+
+probe("A", A)
+probe("B", B)
+probe("C", C)
+probe("¬A", not_out)
+probe("¬(A ∧ B)", nand_out)
+probe("A ∧ B", and_out)
+probe("A ∨ B", or_out)
+probe("A ⊕ B", xor_out)
+probe("mux(C, A, B)", mux_out)
+
+wire_together(not_gate(A), not_out)
+wire_together(nand_gate(A, B), nand_out)
+wire_together(and_gate(A, B), and_out)
+wire_together(or_gate(A, B), or_out)
+wire_together(xor_gate(A, B), xor_out)
+wire_together(mux_gate(C, A, B), mux_out)
 `,
-    makeInputNets: () => ['_net_A', '_net_output_enable'],
-    makeOutputNets: () => ['_net_notA'],
-    gradeResults: (x: any) => ({ success: false, failureTime: 3, message: 'bad', miniMessage: '?' }),
+    makeInputNets: (components: EComponent[]) => {
+      components.push(
+        { kind: 'signal', net: '_net_A', pattern: [...'01010101zz01z'] as any, repeat: false },
+        { kind: 'signal', net: '_net_B', pattern: [...'0011001101zzz'] as any, repeat: false },
+        { kind: 'signal', net: '_net_C', pattern: [...'000011110000z'] as any, repeat: false },
+      );
+      return ['_net_A', '_net_B', '_net_C'];
+    },
+    makeOutputNets: () => ['_net_not_out', '_net_nand_out', '_net_and_out', '_net_or_out', '_net_xor_out', '_net_mux_out'],
+    gradeResults: (simResults: ISimResults) => doGrading(simResults, [
+      { net: '_net_not_out',  netName: '¬A',           reqs: reqSeq('10101010zz10z') },
+      { net: '_net_nand_out', netName: '¬(A ∧ B)',     reqs: reqSeq('111011101z1zz') },
+      { net: '_net_and_out',  netName: 'A ∧ B',        reqs: reqSeq('000100010z0zz') },
+      { net: '_net_or_out',   netName: 'A ∨ B',        reqs: reqSeq('01110111z1z1z') },
+      { net: '_net_xor_out',  netName: 'A ⊕ B',        reqs: reqSeq('01100110zzzzz') },
+      { net: '_net_mux_out',  netName: 'mux(C, A, B)', reqs: reqSeq('01010011zz01z') },
+    ]),
   },
+
+  // ============================== Adder ==============================
   {
     internalName: 'adder',
     name: 'Adder',
-    levelDesc: `This is the first level.
-To open up the documentation press `,
-    startingCode: '# Your code here.\n',
-    makeInputNets: () => ['_net_A', '_net_output_enable'],
-    makeOutputNets: () => ['_net_notA'],
-    gradeResults: (x: any) => ({ success: false, failureTime: 3, message: 'bad', miniMessage: '?' }),
+    levelDesc: `Your goal is to implement a 3-bit + 3-bit to 3-bit two's complement adder (throwing away the carry bit). The numbers are all little-endian, and thus the first bit in a list is the lowest order.`,
+    startingCode: `
+def adder(a: "List[Net]", b: "List[Net]") -> "List[Net]":
+    assert len(a) == len(b)
+    result = [new_net() for _ in range(len(a))]
+    # Inputs are little endian: a[0] is the lowest order bit.
+    ...
+    return result
+
+A_nets, B_nets = get_level_inputs()
+output_nets = get_level_outputs()
+
+for i, n in enumerate(A_nets):
+    probe("A[%i]" % i, n)
+for i, n in enumerate(B_nets):
+    probe("B[%i]" % i, n)
+for i, n in enumerate(output_nets):
+    probe("(A + B)[%i]" % i, n)
+
+# Use our adder function, then wire it up to the outputs.
+result = adder(A_nets, B_nets)
+for n1, n2 in zip(output_nets, result):
+    wire_together(n1, n2)
+`,
+    makeInputNets: (components: EComponent[]) => {
+      components.push(
+        { kind: 'signal', net: '_net_A0', pattern: [...'000111111111z'] as any, repeat: false },
+        { kind: 'signal', net: '_net_A1', pattern: [...'000000000111z'] as any, repeat: false },
+        { kind: 'signal', net: '_net_A2', pattern: [...'000000000000z'] as any, repeat: false },
+        { kind: 'signal', net: '_net_B0', pattern: [...'000000111111z'] as any, repeat: false },
+        { kind: 'signal', net: '_net_B1', pattern: [...'000000000000z'] as any, repeat: false },
+        { kind: 'signal', net: '_net_B2', pattern: [...'000000000111z'] as any, repeat: false },
+      );
+      return [['_net_A0', '_net_A1', '_net_A2'], ['_net_B0', '_net_B1', '_net_B2']];
+    },
+    makeOutputNets: () => ['_net_sum0', '_net_sum1', '_net_sum2'],
+    gradeResults: (simResults: ISimResults) => doGrading(simResults, [
+      { net: '_net_sum0', netName: '(A + B)[0]', reqs: reqSeq('xx0xx1xx0xx0') },
+      { net: '_net_sum1', netName: '(A + B)[1]', reqs: reqSeq('xx0xx0xx1xx0') },
+      { net: '_net_sum2', netName: '(A + B)[2]', reqs: reqSeq('xx0xx0xx0xx0') },
+    ]),
   },
   {
     internalName: 'flipflops',
@@ -538,6 +676,9 @@ interface IAppState {
   simOutput: string;
   simResults: null | ISimResults;
   grading: null | IGrading;
+  paneColor: string;
+  docsOpen: boolean;
+  cheatMode: boolean;
 }
 
 class App extends React.PureComponent<{}, IAppState> {
@@ -558,13 +699,26 @@ class App extends React.PureComponent<{}, IAppState> {
       simOutput: '',
       simResults: null,
       grading: null,
+      paneColor: '#222',
+      docsOpen: false,
+      cheatMode: false,
     };
 
     window.onpopstate = (event) => {
-      this.setState({
-        page: 'level-select',
-      })
+      this.navigateBack();
     };
+
+    var cheat_index = 0;
+    const cheat_sequence = 'unlock';
+    document.addEventListener('keydown', (evt) => {
+      if (evt.key === cheat_sequence[cheat_index]) {
+        cheat_index++;
+        if (cheat_index >= cheat_sequence.length)
+          this.setState({cheatMode: true });
+      } else {
+        cheat_index = 0; 
+      }
+    });
   }
 
   loadLevelStatesFromLocalStorage() {
@@ -587,6 +741,7 @@ class App extends React.PureComponent<{}, IAppState> {
   }
 
   simulate(components: EComponent[]) {
+    const startTime = performance.now();
     // Insert components for power and ground.
     components = [
       ...components,
@@ -694,7 +849,8 @@ class App extends React.PureComponent<{}, IAppState> {
     for (const net of nets)
       netTraces.set(net, traces[netIndices.get(net)!]);
 
-    let simOutput = `Components: ${components.length - 2}  Nets: ${nets.size}`;
+    const elapsed = performance.now() - startTime;
+    let simOutput = `------- Simulation completed in: ${elapsed}ms (Components: ${components.length - 2} Nets: ${nets.size})`;
     const simResults: ISimResults = {
       components: components.length,
       nets: [...nets],
@@ -717,6 +873,7 @@ class App extends React.PureComponent<{}, IAppState> {
       const levelState = this.levelStates.get(this.state.currentLevel.internalName)!;
       levelState.metadata.everBeaten = true;
       persistLevelState(this.state.currentLevel.internalName, levelState);
+      this.setState({ paneColor: '#343' });
     } else {
       simOutput += '\n\nLEVEL FAILED: ' + grading.message;
     }
@@ -873,11 +1030,14 @@ class App extends React.PureComponent<{}, IAppState> {
     myPromise.then(
       (mod: any) => {
         //console.log('success');
-        this.setState({ terminalOutput: `Success: components=${components.length}\n` + results.join('') });
+        let terminalOutput = results.join('');
+        if (terminalOutput && !terminalOutput.endsWith('\n'))
+          terminalOutput += '\n';
+        this.setState({ terminalOutput, paneColor: '#222' });
         this.simulate(components);
       },
       (err: any) => {
-        this.setState({ terminalOutput: results.join('') + '\n' + err.toString() });
+        this.setState({ terminalOutput: results.join('') + '\n' + err.toString(), simOutput: '', paneColor: '#433' });
       },
     );
   }
@@ -887,9 +1047,11 @@ class App extends React.PureComponent<{}, IAppState> {
       page: 'level',
       currentLevel: level,
       code: this.levelStates.get(level.internalName)!.code,
-      terminalOutput: '(Hit ctrl + enter in the code window to rerun.)',
-      simOutput: '',
+      terminalOutput: '',
+      simOutput: '(Hit ctrl + enter in the code window to rerun.)',
       simResults: null,
+      grading: null,
+      paneColor: '#222',
     });
 
     const levelState = this.levelStates.get(level.internalName)!;
@@ -897,6 +1059,15 @@ class App extends React.PureComponent<{}, IAppState> {
     persistLevelState(level.internalName, levelState);
 
     window.history.pushState({page: 'level', currentLevel: level.internalName}, 'Make a Microprocessor');
+  }
+
+  getIsUnsaved(): boolean {
+    return this.state.code !== this.levelStates.get(this.state.currentLevel.internalName)!.code;
+  }
+
+  navigateBack() {
+    if (!this.getIsUnsaved() || window.confirm('Exit level without saving work? (Just hit ctrl+s in the code editor.)'))
+      this.setState({ page: 'level-select' });
   }
 
   render() {
@@ -926,7 +1097,7 @@ class App extends React.PureComponent<{}, IAppState> {
               const result = <div
                 key={i}
                 style={{
-                  fontSize: '150%',
+                  fontSize: '120%',
                   margin: 10,
                   padding: 10,
                   width: 300,
@@ -958,7 +1129,7 @@ class App extends React.PureComponent<{}, IAppState> {
                 </div>}
               </div>;
 
-              if (!levelState.metadata.everBeaten)
+              if (!levelState.metadata.everBeaten && !this.state.cheatMode)
                 locked = true;
 
               return result;
@@ -967,7 +1138,7 @@ class App extends React.PureComponent<{}, IAppState> {
         </div>
 
         <div style={{ position: 'absolute', left: 10, bottom: 10 }}>
-          By Peter Schmidt-Nielsen
+          By Peter Schmidt-Nielsen (v0.2)
         </div>
         <div
           style={{ position: 'absolute', right: 10, bottom: 10, padding: 10 }}
@@ -1009,14 +1180,18 @@ class App extends React.PureComponent<{}, IAppState> {
     const vertResizeStyle = {
       background: 'black',
       width: '3px',
+      minWidth: '3px',
       cursor: 'col-resize',
       height: '100%',
+      zIndex: 20,
     };
     const horizResizeStyle = {
       background: 'black',
       height: '3px',
+      minHeight: '3px',
       cursor: 'row-resize',
       width: '100%',
+      zIndex: 20,
     };
     let vertSplitDefault = parseInt(localStorage.getItem('split1') || '500');
     let horizSplitDefault = parseInt(localStorage.getItem('split2') || '400');
@@ -1032,6 +1207,48 @@ class App extends React.PureComponent<{}, IAppState> {
         resizerStyle={vertResizeStyle}
       >
         <div style={{ position: 'relative' }}>
+          {/* Top left menu bar */}
+          <div style={{ display: 'flex', alignItems: 'center', background: '#444', borderBottom: '2px solid #222' }}>
+            <div
+              style={{
+                bottom: 10,
+                right: 70,
+              }}
+              className='mainButton'
+              onClick={() => this.navigateBack()}
+            >
+              ❮
+            </div>
+            <div
+              style={{
+                bottom: 10,
+                right: 10,
+              }}
+              className='mainButton'
+              onClick={() => this.setState({ docsOpen: !this.state.docsOpen })}
+            >
+              Parts List
+            </div>
+            <div
+              style={{
+                bottom: 10,
+                right: 10,
+              }}
+              className='mainButton'
+              onClick={() => {
+                if (window.confirm("Throw away your code and reset to the level's starting code?"))
+                  this.setState({ code: this.state.currentLevel.startingCode});
+              }}
+            >
+              Reset code
+            </div>
+            {/*
+            <div style={{ color: 'white', marginLeft: 10, fontSize: '150%' }}>
+              Level: {this.state.currentLevel.name}
+            </div>
+            */}
+          </div>
+
           <ControlledCodeMirror
             value={this.state.code}
             options={codeMirrorOptions(this.onCompile)}
@@ -1039,17 +1256,17 @@ class App extends React.PureComponent<{}, IAppState> {
               this.setState({ code });
             }}
           />
-          {this.state.code !== this.levelStates.get(this.state.currentLevel.internalName)!.code &&
+          {this.getIsUnsaved() &&
             <div style={{
               position: 'absolute',
-              right: '5%',
-              bottom: '5%',
+              right: 20,
+              bottom: 20,
               userSelect: 'none',
               zIndex: 5,
               color: 'red',
               opacity: 0.5,
             }}>
-                ⬤ Unsaved
+              ⬤ Unsaved
             </div>
           }
         </div>
@@ -1096,40 +1313,160 @@ class App extends React.PureComponent<{}, IAppState> {
             </div>
 
             <div style={{
-              backgroundColor: '#222',
+              backgroundColor: this.state.paneColor,
               color: 'white',
               fontFamily: 'monospace',
               width: '100%',
               height: '100%',
               display: 'flex',
             }}>
-              <div style={{ margin: 10, width: 400 }}>
+              <div style={{ padding: 10, width: 400, backgroundColor: '#222' }}>
                 <b>{this.state.currentLevel.name}</b>
                 <p style={{whiteSpace: 'pre-wrap'}}>
                   {this.state.currentLevel.levelDesc}
                 </p>
               </div>
+
               <div
                 style={{ width: 2, backgroundColor: '#555' }}
               />
+
               <div style={{
                 margin: 10,
                 whiteSpace: 'pre-wrap',
                 color: 'white',
               }}>
-                {this.state.terminalOutput}
-                <span style={{color: 'red'}}>{'\n\n' + this.state.simOutput}</span>
+                {this.state.terminalOutput && <>
+                  Python output:<br/>
+                  <span style={{color: 'lightblue'}}>{this.state.terminalOutput}</span><br/>
+                  <br/>
+                </>}
+                {this.state.simOutput}
               </div>
             </div>
           </SplitPane>
         </div>
       </SplitPane>
 
-      {/* Menu bar */}
-      <div style={{
-        width: 100,
+      {this.state.paneColor === '#343' && <div style={{
+        position: 'absolute',
+        right: 30,
+        bottom: 30,
+        padding: 20,
+        fontSize: '400%',
+        boxShadow: '0px 0px 50px green',
+      }} className='hoverButton' onClick={() => {
+        this.navigateBack();
       }}>
-        asdf
+        You win!
+      </div>}
+
+      <div style={{
+        position: 'absolute',
+        width: 800,
+        height: '100%',
+        boxSizing: 'border-box',
+        boxShadow: '0px 0px 10px black',
+        right: this.state.docsOpen ? 810 : 0,
+        zIndex: 100,
+        backgroundColor: '#666',
+        transition: '0.2s right',
+        padding: 10,
+        transform: 'translate(810px, 0px)',
+        overflowY: 'scroll',
+      }}>
+        <div style={{ position: 'sticky', top: 0 }}>
+          <div
+            style={{ position: 'absolute', top: 5, right: 5, fontSize: '120%', padding: 4 }}
+            className='hoverButton'
+            onClick={() => this.setState({ docsOpen: false })}
+          >
+            ✕
+          </div>
+        </div>
+
+        <span style={{ fontSize: '150%', fontWeight: 'bold' }}>Parts list</span>
+        <p>
+          The code area is "Python".
+          I provide functions that construct circuit components as a side effect.
+          The four functions you need to use to assemble your circuit are:
+
+          <div style={{ marginLeft: 20, marginBottom: 20 }}>
+            <pre style={{ fontWeight: 'bold', fontSize: '120%' }}>nfet(gate: Net, drain: Net, source: Optional[Net])</pre>
+            <div style={{ marginLeft: 20 }}>
+              Constructs an n-channel FET in the circuit. The behavior is:
+              <pre style={{ marginLeft: 20 }}>{
+`if gate is high and source is low:
+    drive drain low`
+              }</pre>
+              If the source argument is omitted it defaults to <code>gnd</code> (always low).
+              There is no modeled body diode, so the FET simply does nothing (doesn't conduct) if source is high and drain is low.
+              Additionally, no gate capacitance is modeled — all nets that aren't driven return to a floating state which doesn't switch FETs on.
+
+              Examples:
+              <pre style={{ marginLeft: 20 }}>{
+`# Pulls \`output\` down whenever \`gate\` is high.
+nfet(gate, output, gnd)
+
+# This is equivalent to the above, as gnd is implicit.
+nfet(gate, output)
+
+# Here the two nfets are wired in series, and \`output\`
+# is pulled down when both \`gate1\` and \`gate2\` are high.
+intermediate = new_net()
+nfet(gate1, intermediate)
+nfet(gate2, output, intermediate)`
+              }</pre>
+            </div>
+
+            <pre style={{ fontWeight: 'bold', fontSize: '120%' }}>pfet(gate: Net, drain: Net, source: Optional[Net])</pre>
+            <div style={{ marginLeft: 20 }}>
+              Constructs a p-channel FET in the circuit. The behavior is:
+              <pre style={{ marginLeft: 20 }}>{
+`if gate is low and source is high:
+    drive drain high`
+              }</pre>
+              If the source argument is omitted it defaults to <code>vdd</code> (always high).
+              Again, there is no modeled body diode or gate capacitance.
+            </div>
+
+            <pre style={{ fontWeight: 'bold', fontSize: '120%' }}>new_net() -&gt; Net</pre>
+            <div style={{ marginLeft: 20 }}>
+              Creates a new unique net (electrical node in your circuit), and returns it.
+            </div>
+
+            <pre style={{ fontWeight: 'bold', fontSize: '120%' }}>wire_together(net1: Net, net2: Net)</pre>
+            <div style={{ marginLeft: 20 }}>
+              Connect two nets together so that they are electrically equivalent.
+            </div>
+          </div>
+
+          I provide two additional functions for debugging and testing purposes:
+
+          <div style={{ marginLeft: 20, marginBottom: 20 }}>
+            <pre style={{ fontWeight: 'bold', fontSize: '120%' }}>probe(label: str, net: Net)</pre>
+            <div style={{ marginLeft: 20 }}>
+              Causes a net's voltage to be plotted in the simulation results pane (top right).
+            </div>
+
+            <pre style={{ fontWeight: 'bold', fontSize: '120%' }}>signal(pattern: str) -&gt; Net</pre>
+            <div style={{ marginLeft: 20 }}>
+              Constructs a signal generator component, and returns the generator's output net.
+              The pattern string must be made of 0s, 1s, and zs, and may optionally end with ... to indicate that the pattern should repeat.
+              The value z indicates that the signal generator shouldn't drive the output (high Z).
+
+              Examples:
+              <pre style={{ marginLeft: 20 }}>{
+`# Creates a clock signal that toggles every time step.
+clock = signal('01...')
+
+# The signal waits three time steps, then drives high,
+# then stops driving forever.
+output = signal('zzz1z')`
+              }</pre>
+            </div>
+          </div>
+        </p>
       </div>
     </div>;
   }

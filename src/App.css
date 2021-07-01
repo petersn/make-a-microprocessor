@@ -1,4 +1,23 @@
 
+.mainButton {
+  border: 2px solid black;
+  background-color: #444;
+  border-radius: 15px;
+  user-select: none;
+  cursor: pointer;
+  padding: 10px;
+  font-size: 120%;
+  margin: 5px;
+  transition: 0.1s box-shadow;
+  z-index: 5;
+  color: white;
+}
+
+.mainButton:hover {
+  background-color: #555;
+  box-shadow: 0px 0px 10px #bbb;
+}
+
 .hoverButton {
   border: 2px solid black;
   background-color: #444;
@@ -33,10 +52,15 @@
   /*text-shadow: 0px 0px 2px white;*/
 }
 
-.CodeMirror {
-    height: 100vh !important;
+.Pane1 > div:first-child, .CodeMirror, .react-codemirror2 {
+  /*height: 100vh !important;*/
+  height: 100% !important;
 }
 
 body {
   background: #333;
+}
+
+html {
+  overflow: hidden;
 }

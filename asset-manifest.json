@@ -1,8 +1,8 @@
 {
   "files": {
     "main.css": "/make-a-microprocessor/static/css/main.7c970e94.chunk.css",
-    "main.js": "/make-a-microprocessor/static/js/main.90593928.chunk.js",
-    "main.js.map": "/make-a-microprocessor/static/js/main.90593928.chunk.js.map",
+    "main.js": "/make-a-microprocessor/static/js/main.badd44bf.chunk.js",
+    "main.js.map": "/make-a-microprocessor/static/js/main.badd44bf.chunk.js.map",
     "runtime-main.js": "/make-a-microprocessor/static/js/runtime-main.e5d974d6.js",
     "runtime-main.js.map": "/make-a-microprocessor/static/js/runtime-main.e5d974d6.js.map",
     "static/css/2.3f3250e8.chunk.css": "/make-a-microprocessor/static/css/2.3f3250e8.chunk.css",
@@ -20,6 +20,6 @@
     "static/css/2.3f3250e8.chunk.css",
     "static/js/2.810aa290.chunk.js",
     "static/css/main.7c970e94.chunk.css",
-    "static/js/main.90593928.chunk.js"
+    "static/js/main.badd44bf.chunk.js"
   ]
 }

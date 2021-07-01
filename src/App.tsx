@@ -1087,53 +1087,55 @@ class App extends React.PureComponent<{}, IAppState> {
         <div style={{
           marginTop: 30,
         }}>
-          <span style={{fontSize: '200%'}}>Make a Processor</span><br/>
+          <span style={{fontSize: '200%'}}>Make a Microprocessor</span><br/>
           <br/>
-          Select a level:
-          <div style={{ display: 'flex', flexDirection: 'column', marginTop: 20 }}>
-            {globalLevelsList.map((level, i) => {
-              const levelState = this.levelStates.get(level.internalName)!;
+          Select a level:<br/>
+          <div style={{ display: 'inline-block' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', marginTop: 20 }}>
+              {globalLevelsList.map((level, i) => {
+                const levelState = this.levelStates.get(level.internalName)!;
 
-              const result = <div
-                key={i}
-                style={{
-                  fontSize: '120%',
-                  margin: 10,
-                  padding: 10,
-                  width: 300,
-                  position: 'relative',
-                }}
-                className={locked ? 'lockedButton' : 'hoverButton'}
-                onClick={locked ? () => null : () => this.switchToLevel(level)}
-              >
-                {locked ? '???' : level.name}
-                {!locked && !levelState.metadata.everOpened && <div style={{
-                  position: 'absolute',
-                  fontSize: '80%',
-                  color: 'red',
-                  left: '92%',
-                  top: '0%',
-                  transform: 'rotate(30deg)',
-                }}>
-                  New!
-                </div>}
-                {levelState.metadata.everBeaten && <div style={{
-                  position: 'absolute',
-                  fontSize: '300%',
-                  color: 'green',
-                  left: '100%',
-                  top: '50%',
-                  transform: 'translate(-50%, -50%)',
-                }}>
-                  ✓
-                </div>}
-              </div>;
+                const result = <div
+                  key={i}
+                  style={{
+                    fontSize: '120%',
+                    margin: 10,
+                    padding: 10,
+                    width: 300,
+                    position: 'relative',
+                  }}
+                  className={locked ? 'lockedButton' : 'hoverButton'}
+                  onClick={locked ? () => null : () => this.switchToLevel(level)}
+                >
+                  {locked ? '???' : level.name}
+                  {!locked && !levelState.metadata.everOpened && <div style={{
+                    position: 'absolute',
+                    fontSize: '80%',
+                    color: 'red',
+                    left: '92%',
+                    top: '0%',
+                    transform: 'rotate(30deg)',
+                  }}>
+                    New!
+                  </div>}
+                  {levelState.metadata.everBeaten && <div style={{
+                    position: 'absolute',
+                    fontSize: '300%',
+                    color: 'green',
+                    left: '100%',
+                    top: '50%',
+                    transform: 'translate(-50%, -50%)',
+                  }}>
+                    ✓
+                  </div>}
+                </div>;
 
-              if (!levelState.metadata.everBeaten && !this.state.cheatMode)
-                locked = true;
+                if (!levelState.metadata.everBeaten && !this.state.cheatMode)
+                  locked = true;
 
-              return result;
-            })}
+                return result;
+              })}
+            </div>
           </div>
         </div>
 

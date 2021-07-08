@@ -714,7 +714,7 @@ probe("Register's output", register_out)
     internalName: 'state_machine',
     name: 'State Machines',
     levelDesc: `This level is much harder than all previous. \
-Your goal will be to implement a circuit that takes in decimal digits one at a time over a serial bus, and output if the number is a multiple of seven. \
+Your goal will be to implement a circuit that takes in decimal digits one at a time over a serial bus, and outputs if the number is a multiple of seven. \
 On each rising clock edge you must read the \`reset\` and \`data_in\` lines, and update your state and the output line. \
 You will receive decimal digits as sets of four bits, encoded in big-endian, transmitted over four consecutive clock cycles.
 
@@ -763,22 +763,24 @@ probe("Divisible by 7?", div7)
     },
     makeOutputNets: () => ['_net_div7'],
     gradeResults: (self: ILevel, simResults: ISimResults) => doGrading(simResults, [
-      { net: '_net_div7', netName: "Divisible by 7?", reqs: reqSeq(self.clockDivider, 'xxxxxxxxx1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'), failureMessages: ['The input being tested at this point is 0, which is divisible by seven',      '0 is divisible'] },
-      { net: '_net_div7', netName: "Divisible by 7?", reqs: reqSeq(self.clockDivider, 'xxxxxxxxxxxxxxxxxxx0xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'), failureMessages: ['The input being tested at this point is 1, which is not divisible by seven',  '1 is not divisible'] },
-      { net: '_net_div7', netName: "Divisible by 7?", reqs: reqSeq(self.clockDivider, 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxx1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'), failureMessages: ['The input being tested at this point is 7, which is divisible by seven',      '7 is divisible'] },
-      { net: '_net_div7', netName: "Divisible by 7?", reqs: reqSeq(self.clockDivider, 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx0xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'), failureMessages: ['The input being tested at this point is 1 (just the first digit of 14), which is not divisible by seven',  '1 is not divisible'] },
-      { net: '_net_div7', netName: "Divisible by 7?", reqs: reqSeq(self.clockDivider, 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'), failureMessages: ['The input being tested at this point is 14, which is divisible by seven',     '14 is divisible'] },
-      { net: '_net_div7', netName: "Divisible by 7?", reqs: reqSeq(self.clockDivider, 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx0xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'), failureMessages: ['The input being tested at this point is 1 (just the first digit of 17), which is not divisible by seven',  '1 is not divisible'] },
-      { net: '_net_div7', netName: "Divisible by 7?", reqs: reqSeq(self.clockDivider, 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx0xxxxxxxxxxxxxxxxxxxxxxxxxx'), failureMessages: ['The input being tested at this point is 17, which is not divisible by seven', '17 is not divisible'] },
-      { net: '_net_div7', netName: "Divisible by 7?", reqs: reqSeq(self.clockDivider, 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx1xxxxxxxxxxxxxxxx'), failureMessages: ['The input being tested at this point is 7 (just the first digit of 791), which is divisible by seven',      '7 is divisible'] },
+      { net: '_net_div7', netName: "Divisible by 7?", reqs: reqSeq(self.clockDivider, 'xxxxxxxxx1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'), failureMessages: ['The input being tested at this point is 0, which is divisible by seven',                                         '0 is divisible'] },
+      { net: '_net_div7', netName: "Divisible by 7?", reqs: reqSeq(self.clockDivider, 'xxxxxxxxxxxxxxxxxxx0xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'), failureMessages: ['The input being tested at this point is 1, which is not divisible by seven',                                     '1 is not divisible'] },
+      { net: '_net_div7', netName: "Divisible by 7?", reqs: reqSeq(self.clockDivider, 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxx1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'), failureMessages: ['The input being tested at this point is 7, which is divisible by seven',                                         '7 is divisible'] },
+      { net: '_net_div7', netName: "Divisible by 7?", reqs: reqSeq(self.clockDivider, 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx0xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'), failureMessages: ['The input being tested at this point is 1 (just the first digit of 14), which is not divisible by seven',        '1 is not divisible'] },
+      { net: '_net_div7', netName: "Divisible by 7?", reqs: reqSeq(self.clockDivider, 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'), failureMessages: ['The input being tested at this point is 14, which is divisible by seven',                                        '14 is divisible'] },
+      { net: '_net_div7', netName: "Divisible by 7?", reqs: reqSeq(self.clockDivider, 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx0xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'), failureMessages: ['The input being tested at this point is 1 (just the first digit of 17), which is not divisible by seven',        '1 is not divisible'] },
+      { net: '_net_div7', netName: "Divisible by 7?", reqs: reqSeq(self.clockDivider, 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx0xxxxxxxxxxxxxxxxxxxxxxxxxx'), failureMessages: ['The input being tested at this point is 17, which is not divisible by seven',                                    '17 is not divisible'] },
+      { net: '_net_div7', netName: "Divisible by 7?", reqs: reqSeq(self.clockDivider, 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx1xxxxxxxxxxxxxxxx'), failureMessages: ['The input being tested at this point is 7 (just the first digit of 791), which is divisible by seven',           '7 is divisible'] },
       { net: '_net_div7', netName: "Divisible by 7?", reqs: reqSeq(self.clockDivider, 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx0xxxxxxxx'), failureMessages: ['The input being tested at this point is 79 (just the first two digits of 791), which is not divisible by seven', '79 is not divisible'] },
-      { net: '_net_div7', netName: "Divisible by 7?", reqs: reqSeq(self.clockDivider, 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx1'), failureMessages: ['The input being tested at this point is 791, which is divisible by seven',    '791 is divisible'] },
+      { net: '_net_div7', netName: "Divisible by 7?", reqs: reqSeq(self.clockDivider, 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx1'), failureMessages: ['The input being tested at this point is 791, which is divisible by seven',                                       '791 is divisible'] },
     ]),
-    xStep: 0.3,
-    simSteps: 3000,
-    clockDivider: 30,
+    xStep: 0.3 / 5,
+    simSteps: 3000 * 5,
+    clockDivider: 30 * 5,
     tickSpacing: 2,
   },
+
+  // ============================== SRAM ==============================
   {
     internalName: 'sram',
     name: 'SRAM',
@@ -792,6 +794,8 @@ probe("Divisible by 7?", div7)
     clockDivider: 10,
     tickSpacing: 1,
   },
+
+  // ============================== Microprocessor ==============================
   {
     internalName: 'microprocessor',
     name: 'Microprocessor',
@@ -833,10 +837,59 @@ interface IGrading {
   miniMessage: string;
 }
 
+interface ITextEditorProps {
+  startingCode: string;
+  extraKeysMaker: (textEditorComponent: TextEditor) => any;
+  getSavedCode: () => string;
+}
+
+interface ITextEditorState {
+  code: string;
+}
+
+class TextEditor extends React.PureComponent<ITextEditorProps, ITextEditorState> {
+  constructor(props: ITextEditorProps) {
+    super(props);
+    this.state = { code: props.startingCode };
+  }
+
+  render() {
+    return <div>
+      <ControlledCodeMirror
+        value={this.state.code}
+        options={{
+          mode: 'python',
+          theme: 'material',
+          lineNumbers: true,
+          indentUnit: 4,
+          lineWrapping: true,
+          extraKeys: this.props.extraKeysMaker(this),
+        }}
+        onBeforeChange={(editor, data, code) => {
+          this.setState({ code });
+        }}
+      />
+      {this.props.getSavedCode() !== this.state.code &&
+        <div style={{
+          position: 'absolute',
+          right: 20,
+          bottom: 20,
+          userSelect: 'none',
+          pointerEvents: 'none',
+          zIndex: 5,
+          color: 'red',
+          opacity: 0.5,
+        }}>
+          ⬤ Unsaved (ctrl + s to save)
+        </div>
+      }
+    </div>;
+  }
+}
+
 interface IAppState {
   page: 'level-select' | 'level';
   currentLevel: ILevel;
-  code: string;
   terminalOutput: string;
   simOutput: string;
   simResults: null | ISimResults;
@@ -848,6 +901,7 @@ interface IAppState {
 
 class App extends React.PureComponent<{}, IAppState> {
   levelStates: Map<string, ILevelState>;
+  textEditorRef = React.createRef<TextEditor>();
 
   constructor(props: {}) {
     super(props);
@@ -859,7 +913,7 @@ class App extends React.PureComponent<{}, IAppState> {
     this.state = {
       page: 'level-select',
       currentLevel: null as unknown as ILevel,
-      code: '',
+      //code: '',
       terminalOutput: '',
       simOutput: '',
       simResults: null,
@@ -899,7 +953,7 @@ class App extends React.PureComponent<{}, IAppState> {
   }
 
   reportError(lineNum: number, message: string) {
-    const lineOfCode = this.state.code.split('\n')[lineNum - 1];
+    const lineOfCode = this.getCode().split('\n')[lineNum - 1];
     this.setState({
       terminalOutput: `  ${lineOfCode}\n\nError on line ${lineNum}: ${message}`,
     });
@@ -1216,13 +1270,18 @@ class App extends React.PureComponent<{}, IAppState> {
     this.setState({
       page: 'level',
       currentLevel: level,
-      code: this.levelStates.get(level.internalName)!.code,
+      //code: this.levelStates.get(level.internalName)!.code,
       terminalOutput: '',
       simOutput: '(Hit ctrl + enter in the code window to rerun.)',
       simResults: null,
       grading: null,
       paneColor: '#222',
     });
+    //this.setCode(this.levelStates.get(level.internalName)!.code);
+    /*
+    if (this.codeMirrorRef.current !== null)
+      (this.codeMirrorRef.current as any).value = this.state.currentLevel.startingCode;
+    */
 
     const levelState = this.levelStates.get(level.internalName)!;
     levelState.metadata.everOpened = true;
@@ -1231,13 +1290,24 @@ class App extends React.PureComponent<{}, IAppState> {
     window.history.pushState({page: 'level', currentLevel: level.internalName}, 'Make a Microprocessor');
   }
 
-  getIsUnsaved(): boolean {
-    return this.state.code !== this.levelStates.get(this.state.currentLevel.internalName)!.code;
-  }
+  getIsUnsaved = (): boolean => this.getCode() !== this.getSavedCode();
+
+  getSavedCode = (): string => this.levelStates.get(this.state.currentLevel.internalName)!.code;
 
   navigateBack() {
     if (!this.getIsUnsaved() || window.confirm('Exit level without saving work? (Just hit ctrl+s in the code editor.)'))
       this.setState({ page: 'level-select' });
+  }
+
+  setCode(code: string) {
+    if (this.textEditorRef.current !== null)
+      this.textEditorRef.current.setState({ code });
+  }
+
+  getCode(): string {
+    if (this.textEditorRef.current !== null)
+      return this.textEditorRef.current.state.code;
+    return 'raise Exception("Internal bug: textEditorRef is null")';
   }
 
   render() {
@@ -1310,7 +1380,7 @@ class App extends React.PureComponent<{}, IAppState> {
         </div>
 
         <div style={{ position: 'absolute', left: 10, bottom: 10 }}>
-          By Peter Schmidt-Nielsen (v0.3b)
+          By Peter Schmidt-Nielsen (v0.3c)
         </div>
         <div
           style={{ position: 'absolute', right: 10, bottom: 10, padding: 10 }}
@@ -1328,27 +1398,6 @@ class App extends React.PureComponent<{}, IAppState> {
       </div>;
     }
 
-    const codeMirrorOptions = (onCompile: (code: string) => void) => ({
-      mode: 'python',
-      theme: 'material',
-      lineNumbers: true,
-      indentUnit: 4,
-      lineWrapping: true,
-      extraKeys: {
-        'Ctrl-Enter': (cm: any) => {
-          onCompile(this.state.code);
-        },
-        'Ctrl-S': (cm: any) => {
-          const levelState = this.levelStates.get(this.state.currentLevel.internalName)!;
-          levelState.code = this.state.code;
-          persistLevelState(this.state.currentLevel.internalName, levelState);
-          this.forceUpdate();
-        },
-        /*'Tab': (cm: any) => {
-          cm.replaceSelection('  ', 'end');
-        },*/
-      },
-    });
     const vertResizeStyle = {
       background: 'black',
       width: '3px',
@@ -1409,7 +1458,8 @@ class App extends React.PureComponent<{}, IAppState> {
               className='mainButton'
               onClick={() => {
                 if (window.confirm("Throw away your code and reset to the level's starting code?"))
-                  this.setState({ code: this.state.currentLevel.startingCode});
+                  this.setCode(this.state.currentLevel.startingCode);
+                  //this.setState({ code: this.state.currentLevel.startingCode });
               }}
             >
               Reset code
@@ -1421,26 +1471,37 @@ class App extends React.PureComponent<{}, IAppState> {
             */}
           </div>
 
-          <ControlledCodeMirror
-            value={this.state.code}
-            options={codeMirrorOptions(this.onCompile)}
-            onBeforeChange={(editor, data, code) => {
-              this.setState({ code });
-            }}
+          <TextEditor
+            ref={this.textEditorRef}
+            startingCode={this.levelStates.get(this.state.currentLevel.internalName)!.code}
+            getSavedCode={this.getSavedCode}
+            extraKeysMaker={(textEditorComponent: TextEditor) => ({
+              'Ctrl-Enter': (cm: any) => {
+                this.onCompile(textEditorComponent.state.code);
+                //this.props.onCompile(this.getCode());
+              },
+              'Ctrl-S': (cm: any) => {
+                const levelState = this.levelStates.get(this.state.currentLevel.internalName)!;
+                levelState.code = textEditorComponent.state.code;
+                persistLevelState(this.state.currentLevel.internalName, levelState);
+                this.forceUpdate();
+              },
+              /*'Tab': (cm: any) => {
+                cm.replaceSelection('  ', 'end');
+              },*/
+            })}
           />
-          {this.getIsUnsaved() &&
-            <div style={{
-              position: 'absolute',
-              right: 20,
-              bottom: 20,
-              userSelect: 'none',
-              pointerEvents: 'none',
-              zIndex: 5,
-              color: 'red',
-              opacity: 0.5,
-            }}>
-              ⬤ Unsaved (ctrl + s to save)
-            </div>
+          {
+          // <UnControlledCodeMirror
+          //   ref={this.codeMirrorRef}
+          //   value={this.getCode()}
+          //   options={codeMirrorOptions(this.onCompile)}
+          //   /*
+          //   onBeforeChange={(editor, data, code) => {
+          //     this.setState({ code });
+          //   }}
+          //   */
+          // />
           }
         </div>
 

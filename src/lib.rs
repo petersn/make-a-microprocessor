@@ -102,6 +102,7 @@ pub fn perform_simulation(description: &[u32], net_count: u32, duration: u32, cl
   let mut components_by_output_net: Vec<Vec<Component>> =
     (0..net_count).into_iter().map(|x| Vec::new()).collect();
   let mut components: Vec<Component> = Vec::new();
+  //let mut probe_list: Vec<Net> = Vec::new();
 
   {
     let mut i: usize = 0;
@@ -136,7 +137,7 @@ pub fn perform_simulation(description: &[u32], net_count: u32, duration: u32, cl
         /*4 => {
           let address_bit_count = description[i + 1];
           let word_size = description[i + 2];
-          
+
           components.push(Component::PullResistor{is_pull_down, net});
         }*/
         _ => panic!("Deserialization failure. Hit: {} at position {} out of length {}", description[i], i, description.len()),
@@ -208,7 +209,7 @@ pub fn perform_simulation(description: &[u32], net_count: u32, duration: u32, cl
           drives[*net as usize] = merge_drives(drives[*net as usize], signal_output);
         }
         Component::Sram{..} => {
-          
+
         }
       }
     }

@@ -747,8 +747,8 @@ The test cases being fed in are:
 clk, reset, data_in = get_level_inputs()
 div7, = get_level_outputs()
 
-probe("Reset", reset)
 probe("Clock", clk)
+probe("Reset", reset)
 probe("Data in", data_in)
 probe("Divisible by 7?", div7)
 `,
@@ -782,8 +782,7 @@ probe("Divisible by 7?", div7)
   {
     internalName: 'sram',
     name: 'SRAM',
-    levelDesc: `This is the first level.
-To open up the documentation press `,
+    levelDesc: `This level isn't complete yet. Come back later.`,
     startingCode: '# Your code here.\n',
     makeInputNets: () => ['_net_A', '_net_output_enable'],
     makeOutputNets: () => ['_net_notA'],
@@ -1311,7 +1310,7 @@ class App extends React.PureComponent<{}, IAppState> {
         </div>
 
         <div style={{ position: 'absolute', left: 10, bottom: 10 }}>
-          By Peter Schmidt-Nielsen (v0.3)
+          By Peter Schmidt-Nielsen (v0.3b)
         </div>
         <div
           style={{ position: 'absolute', right: 10, bottom: 10, padding: 10 }}
@@ -1381,7 +1380,7 @@ class App extends React.PureComponent<{}, IAppState> {
       >
         <div style={{ position: 'relative' }}>
           {/* Top left menu bar */}
-          <div style={{ display: 'flex', alignItems: 'center', background: '#444', borderBottom: '2px solid #222' }}>
+          <div style={{ display: 'flex', alignItems: 'center', background: '#444', borderBottom: '2px solid #222', height: 60 }}>
             <div
               style={{
                 bottom: 10,
@@ -1446,6 +1445,7 @@ class App extends React.PureComponent<{}, IAppState> {
         </div>
 
         <div>
+          {/*
           <SplitPane
             split="horizontal"
             minSize={30}
@@ -1453,12 +1453,20 @@ class App extends React.PureComponent<{}, IAppState> {
             onChange={(size) => localStorage.setItem('split2', size.toString())}
             resizerStyle={horizResizeStyle}
           >
+          */}
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
             <div style={{
               width: '100%',
-              height: '100%',
+              height: '60vh',
               backgroundColor: '#333',
               color: 'white',
               fontFamily: 'monospace',
+              overflow: 'scroll',
             }}>
               <div style={{ margin: 10 }}>
                 {/*
@@ -1491,10 +1499,11 @@ class App extends React.PureComponent<{}, IAppState> {
               color: 'white',
               fontFamily: 'monospace',
               width: '100%',
-              height: '100%',
+              height: '40vh',
               display: 'flex',
+              //overflowY: 'scroll',
             }}>
-              <div style={{ padding: 10, width: 500, backgroundColor: '#222' }}>
+              <div style={{ padding: 10, width: 500, backgroundColor: '#222', overflowY: 'scroll' }}>
                 <b>{this.state.currentLevel.name}</b>
                 <p style={{whiteSpace: 'pre-wrap'}}>
                   {this.state.currentLevel.levelDesc}
@@ -1509,6 +1518,8 @@ class App extends React.PureComponent<{}, IAppState> {
                 margin: 10,
                 whiteSpace: 'pre-wrap',
                 color: 'white',
+                overflow: 'scroll',
+                width: '100%',
               }}>
                 {this.state.terminalOutput && <>
                   Python output:<br/>
@@ -1518,7 +1529,8 @@ class App extends React.PureComponent<{}, IAppState> {
                 {this.state.simOutput}
               </div>
             </div>
-          </SplitPane>
+          </div>
+          {/* </SplitPane> */}
         </div>
       </SplitPane>
 

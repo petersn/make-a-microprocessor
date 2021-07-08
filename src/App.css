@@ -52,9 +52,10 @@
   /*text-shadow: 0px 0px 2px white;*/
 }
 
-.Pane1 > div:first-child, .CodeMirror, .react-codemirror2 {
+/* .Pane1 > div:first-child,  */
+.CodeMirror, .react-codemirror2 {
   /*height: 100vh !important;*/
-  height: 100% !important;
+  height: calc(100vh - 60px) !important;
 }
 
 body {

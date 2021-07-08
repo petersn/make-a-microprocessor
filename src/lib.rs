@@ -91,6 +91,10 @@ pub fn init_panic_hook() {
     console_error_panic_hook::set_once();
 }
 
+// Performance optimizations to perform:
+//   1. Replace this merge_drives function with a proper thing that uses flags then merges them up at the end.
+//   2. Maybe have a dirty list, so I don't resimulate everything like every time.
+
 #[wasm_bindgen]
 pub fn perform_simulation(description: &[u32], net_count: u32, duration: u32, clock_divider: u32) -> Vec<u8> {
   // We now unpack everything.

@@ -1,25 +1,25 @@
 {
   "files": {
     "main.css": "/make-a-microprocessor/static/css/main.d81b0525.chunk.css",
-    "main.js": "/make-a-microprocessor/static/js/main.9124933d.chunk.js",
-    "main.js.map": "/make-a-microprocessor/static/js/main.9124933d.chunk.js.map",
+    "main.js": "/make-a-microprocessor/static/js/main.7fe1d3b6.chunk.js",
+    "main.js.map": "/make-a-microprocessor/static/js/main.7fe1d3b6.chunk.js.map",
     "runtime-main.js": "/make-a-microprocessor/static/js/runtime-main.e5d974d6.js",
     "runtime-main.js.map": "/make-a-microprocessor/static/js/runtime-main.e5d974d6.js.map",
     "static/css/2.3f3250e8.chunk.css": "/make-a-microprocessor/static/css/2.3f3250e8.chunk.css",
-    "static/js/2.e8f42cb3.chunk.js": "/make-a-microprocessor/static/js/2.e8f42cb3.chunk.js",
-    "static/js/2.e8f42cb3.chunk.js.map": "/make-a-microprocessor/static/js/2.e8f42cb3.chunk.js.map",
+    "static/js/2.2440752d.chunk.js": "/make-a-microprocessor/static/js/2.2440752d.chunk.js",
+    "static/js/2.2440752d.chunk.js.map": "/make-a-microprocessor/static/js/2.2440752d.chunk.js.map",
     "static/js/3.dac61090.chunk.js": "/make-a-microprocessor/static/js/3.dac61090.chunk.js",
     "static/js/3.dac61090.chunk.js.map": "/make-a-microprocessor/static/js/3.dac61090.chunk.js.map",
     "index.html": "/make-a-microprocessor/index.html",
     "static/css/2.3f3250e8.chunk.css.map": "/make-a-microprocessor/static/css/2.3f3250e8.chunk.css.map",
     "static/css/main.d81b0525.chunk.css.map": "/make-a-microprocessor/static/css/main.d81b0525.chunk.css.map",
-    "static/js/2.e8f42cb3.chunk.js.LICENSE.txt": "/make-a-microprocessor/static/js/2.e8f42cb3.chunk.js.LICENSE.txt"
+    "static/js/2.2440752d.chunk.js.LICENSE.txt": "/make-a-microprocessor/static/js/2.2440752d.chunk.js.LICENSE.txt"
   },
   "entrypoints": [
     "static/js/runtime-main.e5d974d6.js",
     "static/css/2.3f3250e8.chunk.css",
-    "static/js/2.e8f42cb3.chunk.js",
+    "static/js/2.2440752d.chunk.js",
     "static/css/main.d81b0525.chunk.css",
-    "static/js/main.9124933d.chunk.js"
+    "static/js/main.7fe1d3b6.chunk.js"
   ]
 }

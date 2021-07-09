@@ -62,6 +62,15 @@ interface ESignal {
   repeat: boolean;
 }
 
+interface ESram {
+  kind: 'sram';
+  contents: Uint32Array;
+  address_nets: string[];
+  bus_in_nets: string[];
+  bus_out_nets: string[];
+  write_enable_net: string;
+}
+
 type EComponent = (
   EFet |
   EPullResistor |
@@ -69,7 +78,8 @@ type EComponent = (
   ETrace |
   EWire |
   EButton |
-  ESignal
+  ESignal |
+  ESram
 );
 
 //import createPlotlyComponent from "react-plotly.js/factory";
@@ -796,10 +806,10 @@ probe("Divisible by 7?", div7)
     makeInputNets: () => ['_net_A', '_net_output_enable'],
     makeOutputNets: () => ['_net_notA'],
     gradeResults: (x: any) => ({ success: false, failureTime: 3, message: 'bad', miniMessage: '?' }),
-    xStep: 1,
-    simSteps: 400,
-    clockDivider: 10,
-    tickSpacing: 1,
+    xStep: 0.3 / 5,
+    simSteps: 3000 * 5,
+    clockDivider: 30 * 5,
+    tickSpacing: 2,
   },
 
   // ============================== Microprocessor ==============================
@@ -1051,6 +1061,19 @@ class App extends React.PureComponent<{}, IAppState> {
             netIndices.get(component.net)!,
           );
           break;
+        case 'sram':
+          descArray.push(
+            4,
+            component.address_nets.length, // address bit count
+            component.bus_in_nets.length,  // word size
+            netIndices.get(component.write_enable_net)!,
+            component.contents.length,
+            ...component.contents,
+            ...component.address_nets.map((net) => netIndices.get(net)!),
+            ...component.bus_in_nets.map((net) => netIndices.get(net)!),
+            ...component.bus_out_nets.map((net) => netIndices.get(net)!),
+          );
+          break;
         default:
           continue;
       }
@@ -1242,6 +1265,29 @@ class App extends React.PureComponent<{}, IAppState> {
     Sk.builtins.signal.co_varnames = ['desc', 'name'];
     Sk.builtins.signal.$defaults = [undefined, 'signal'];
     Sk.builtins.signal.co_numargs = 2;
+
+    Sk.builtins.make_sram = (address_nets: any, bus_in_nets: any, bus_out_nets: any, write_enable_net: any, contents: any) => {
+      address_nets = Sk.ffi.remapToJs(address_nets);
+      bus_in_nets = Sk.ffi.remapToJs(bus_in_nets);
+      bus_out_nets = Sk.ffi.remapToJs(bus_out_nets);
+      write_enable_net = Sk.ffi.remapToJs(write_enable_net);
+      contents = Sk.ffi.remapToJs(contents);
+      if ([address_nets, bus_in_nets, bus_out_nets, write_enable_net].includes(undefined))
+        throw 'too few arguments to: make_sram(address_nets: List[Net], bus_in_nets: List[Net], bus_out_nets: List[Net], write_enable_net: Net, contents: List[int] = [])';
+      if (bus_in_nets.length !== bus_out_nets.length)
+        throw 'make_sram must take the same number of bus_in_nets and bus_out_nets — both are the word size of the memory';
+      components.push({
+        kind: 'sram',
+        contents: new Uint32Array(contents),
+        address_nets,
+        bus_in_nets,
+        bus_out_nets,
+        write_enable_net,
+      });
+    };
+    Sk.builtins.make_sram.co_varnames = ['address_nets', 'bus_in_nets', 'bus_out_nets', 'write_enable_net', 'contents'];
+    Sk.builtins.make_sram.$defaults = [undefined, undefined, undefined, undefined, []];
+    Sk.builtins.make_sram.co_numargs = 5;
 
     Sk.builtins.get_level_inputs = () => {
       const nets = this.state.currentLevel.makeInputNets(components);
@@ -1732,6 +1778,62 @@ output = signal('zzz1z')`
               }</pre>
             </div>
           </div>
+
+          In the last two levels we will also use the SRAM component:
+
+          <div style={{ marginLeft: 20, marginBottom: 20 }}>
+            <pre style={{ fontWeight: 'bold', fontSize: '120%' }}>{`make_sram(
+  # Input nets that are the bits of the address. (Length sets the address size.)
+  address_nets: List[Net],
+
+  # Input nets to give the value when writing. (Length sets the word size.)
+  bus_in_nets: List[Net],
+
+  # Output nets driven by the SRAM when reading. (Must be same length as bus_in_nets.)
+  bus_out_nets: List[Net],
+
+  # Drive write_enable_net low to read, drive high to write.
+  write_enable_net: Net,
+
+  # An optional list of initial values for the SRAM.
+  # (Length may be at most 2**len(address_nets), remaining words are uninitialized.)
+  contents: List[int] = [],
+)`}</pre>
+            <div style={{ marginLeft: 20 }}>
+              Constructs a read-write word-addressed SRAM, optionally initialized with some chosen data.
+              Drive the <code>address_nets</code> to select a word in the memory.
+
+              If <code>write_enable_net</code> is low then the selected memory word is read, and the <code>bus_out_nets</code> are driven with its value.
+              If <code>write_enable_net</code> is high then the selected memory word is updated to be equal to the value on <code>bus_in_nets</code>, and the <code>bus_out_nets</code> are high-Z.
+              The <code>bus_in_nets</code> are always high-Z.
+              There are no setup or hold times (the SRAM is modeled as nearly instant), and the propagation and contamination delays are also nearly instant.
+
+              Example:
+              <pre style={{ marginLeft: 20 }}>{
+`address_nets = [new_net() for _ in range(12)]
+bus_in_nets  = [new_net() for _ in range(4)]
+bus_out_nets = [new_net() for _ in range(4)]
+write_enable_net = new_net()
+
+# Constructs an SRAM that can address 2**12 distinct 4-bit words.
+make_sram(
+    address_nets,
+    bus_in_nets,
+    bus_out_nets,
+    write_enable_net,
+    # Initialize all 2**12 of the words to be 1010.
+    # This initializer argument is optional.
+    [0b1010 for _ in range(2**12)],
+)`
+              }</pre>
+
+              If you do not use the optional contents intializer then the endianness of the address and bus lines is unobservable,
+              and you may of course use the address lines and bus lines in any scrambled order you please.
+              However, the contents initializer breaks this symmetry; the address and bus lines are little-endian wrt the initializer.
+              That is, <code>(contents[addr] &gt;&gt; bit) &amp; 1</code> is the value you will see on <code>bus_out_nets[bit]</code> when <code>address_nets[i] == (addr &gt;&gt; i) &amp; 1</code>
+            </div>
+          </div>
+
         </div>
       </div>
     </div>;

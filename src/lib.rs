@@ -26,7 +26,6 @@ enum Component {
     address_nets: Vec<Net>,
     bus_in_nets: Vec<Net>,
     bus_out_nets: Vec<Net>,
-    read_enable_net: Net,
     write_enable_net: Net,
   },
 }
@@ -147,12 +146,46 @@ pub fn perform_simulation(
           components.push(Component::PullResistor{is_pull_down, net});
           i += 3;
         }
-        /*4 => {
+        4 => {
           let address_bit_count = description[i + 1];
           let word_size = description[i + 2];
-
-          components.push(Component::PullResistor{is_pull_down, net});
-        }*/
+          let write_enable_net = description[i + 3];
+          let contents_length = description[i + 4];
+          let mut idx = i + 5;
+          let mut contents: Vec<NetState> = vec![];
+          for num in description[idx .. idx + contents_length as usize].iter() {
+            for bit_position in 0..word_size {
+              contents.push(
+                if (num >> bit_position) & 1 != 0 {
+                  NetState::High
+                } else {
+                  NetState::Low
+                }
+              );
+            }
+          }
+          while contents.len() < (1 << address_bit_count) * word_size as usize {
+            contents.push(NetState::Invalid);
+          }
+          //let contents = description[idx .. idx + contents_length as usize].iter().cloned().collect();
+          idx += contents_length as usize;
+          let address_nets = description[idx .. idx + address_bit_count as usize].iter().cloned().collect();
+          idx += address_bit_count as usize;
+          let bus_in_nets = description[idx .. idx + word_size as usize].iter().cloned().collect();
+          idx += word_size as usize;
+          let bus_out_nets = description[idx .. idx + word_size as usize].iter().cloned().collect();
+          idx += word_size as usize;
+          components.push(Component::Sram{
+            address_bit_count,
+            word_size,
+            contents,
+            address_nets,
+            bus_in_nets,
+            bus_out_nets,
+            write_enable_net,
+          });
+          i = idx;
+        }
         _ => panic!("Deserialization failure. Hit: {} at position {} out of length {}", description[i], i, description.len()),
       }
       if i >= description.len() {
@@ -174,7 +207,7 @@ pub fn perform_simulation(
       drives[net as usize] = DriveType::HighZ;
     }
 
-    for component in &components {
+    for component in &mut components {
       match component {
         Component::Fet{is_pfet, gate, drain, source} => {
           let gate_state   = net_states[*gate   as usize];
@@ -202,8 +235,49 @@ pub fn perform_simulation(
           }];
           drives[*net as usize] = merge_drives(drives[*net as usize], signal_output);
         }
-        Component::Sram{..} => {
-
+        Component::Sram{
+          address_bit_count,
+          word_size,
+          contents,
+          address_nets,
+          bus_in_nets,
+          bus_out_nets,
+          write_enable_net,
+        } => {
+          // Figure out the address.
+          let mut address_valid = true;
+          let mut address: u32 = 0;
+          for addr_net in address_nets.iter().rev() {
+            address <<= 1;
+            match net_states[*addr_net as usize] {
+              NetState::Low => (),
+              NetState::High => address |= 1,
+              _ => address_valid = false,
+            }
+          }
+          if address_valid {
+            let base_address = (address * *word_size) as usize;
+            match net_states[*write_enable_net as usize] {
+              NetState::Low => {
+                // Read mode: Drive bus_out_nets with the read value.
+                for i in 0..*word_size {
+                  let bus_out_net = bus_out_nets[i as usize] as usize;
+                  match contents[base_address + i as usize] {
+                    NetState::Low => drives[bus_out_net] = merge_drives(drives[bus_out_net], DriveType::Low),
+                    NetState::High => drives[bus_out_net] = merge_drives(drives[bus_out_net], DriveType::High),
+                    _ => (),
+                  }
+                }
+              }
+              NetState::High => {
+                // Write mode: Perform the write.
+                for i in 0..*word_size {
+                  contents[base_address + i as usize] = net_states[bus_in_nets[i as usize] as usize];
+                }
+              }
+              _ => (),
+            }
+          }
         }
       }
     }

@@ -11,6 +11,7 @@ import init, {
   get_indices,
   perform_simulation,
   init_panic_hook,
+  get_first_shoot_through,
 } from './wasm-build/libsnpspice.js';
 
 let wasmInitialized = false;
@@ -19,7 +20,7 @@ let wasm = init(process.env.PUBLIC_URL + "/libsnpspice_bg.wasm").then(() => {
   init_panic_hook();
 });
 
-interface ECompFet {
+interface EFet {
   kind: 'fet';
   isPfet: boolean;
   gate: string;
@@ -37,6 +38,11 @@ interface EProbe {
   kind: 'probe';
   label: string;
   net: string;
+}
+
+interface ETrace {
+  kind: 'trace';
+  nets: string[];
 }
 
 interface EWire {
@@ -57,9 +63,10 @@ interface ESignal {
 }
 
 type EComponent = (
-  ECompFet |
+  EFet |
   EPullResistor |
   EProbe |
+  ETrace |
   EWire |
   EButton |
   ESignal
@@ -969,6 +976,7 @@ class App extends React.PureComponent<{}, IAppState> {
     ];
     // Find all nets.
     const nets = new Set<string>(['vdd', 'gnd']);
+    const tracedNets = new Set<string>();
     const probes: EProbe[] = [];
     const netCanonicalizer = new UnionFind<string>();
     for (const component of components) {
@@ -985,6 +993,11 @@ class App extends React.PureComponent<{}, IAppState> {
         case 'probe':
           probes.push(component);
           nets.add(component.net);
+          tracedNets.add(component.net);
+          break;
+        case 'trace':
+          for (const net of component.nets)
+            tracedNets.add(net);
           break;
         case 'pull_resistor':
         case 'button':
@@ -1044,34 +1057,38 @@ class App extends React.PureComponent<{}, IAppState> {
       descArray.push(123456789);
     }
     const desc = new Uint32Array(descArray);
+    const netsToTraceNativeArray = new Uint32Array(Array.from(tracedNets).map((net) => netIndices.get(net)!));
+    //console.log('[SNP] netsToTraceNativeArray:', netsToTraceNativeArray);
     const traceValues = perform_simulation(
       desc,
+      netsToTraceNativeArray,
       netIndices.size,
       this.state.currentLevel.simSteps,
       this.state.currentLevel.clockDivider,
     );
     const traceIndices = get_indices();
+    //console.log('[SNP] Trace indices:', traceIndices);
     const traces: Uint8Array[] = [];
-    let shootThroughOccurred = false;
-    let earliestShootThrough = Infinity;
+    //let shootThroughOccurred = false;
+    //let earliestShootThrough = Infinity;
     for (let i = 0; i < traceIndices.length; i += 2) {
       const start = traceIndices[i];
       const len = traceIndices[i + 1];
       const trace = traceValues.slice(start, start + len);
-      let t = 0;
-      for (const v of trace) {
-        if (v == 3) {
-          shootThroughOccurred = true;
-          earliestShootThrough = Math.min(earliestShootThrough, t);
-        }
-        t++;
-      }
       traces.push(trace);
     }
+    const earliestShootThrough = get_first_shoot_through();
+    const shootThroughOccurred = earliestShootThrough !== -1;
+
+    //console.log('[SNP] Raw trace data:', traces);
 
     const netTraces = new Map<string, Uint8Array>();
-    for (const net of nets)
-      netTraces.set(net, traces[netIndices.get(net)!]);
+    let i = 0;
+    for (const net of tracedNets)
+      netTraces.set(net, traces[i++]);
+
+    //console.log('[SNP] Floop:', tracedNets);
+    //console.log('[SNP] Traces:', netTraces);
 
     const elapsed = performance.now() - startTime;
     let simOutput = `------- Simulation completed in: ${Math.round(elapsed)}ms (Components: ${components.length - 2} Nets: ${nets.size})`;
@@ -1235,6 +1252,8 @@ class App extends React.PureComponent<{}, IAppState> {
 
     Sk.builtins.get_level_outputs = () => {
       const nets = this.state.currentLevel.makeOutputNets(components);
+      // Ensure that the output nets are actually traced by the simulator, so we may actually read their values.
+      components.push({ kind: 'trace', nets });
       return Sk.ffi.remapToPy(nets);
     };
     Sk.builtins.get_level_outputs.co_varnames = [];
@@ -1633,7 +1652,7 @@ class App extends React.PureComponent<{}, IAppState> {
         </div>
 
         <span style={{ fontSize: '150%', fontWeight: 'bold' }}>Parts list</span>
-        <p>
+        <div style={{ marginTop: 10 }}>
           The code area is "Python". Hit ctrl + enter in the code area to rerun it, and hit ctrl + s to save your code.
           I provide functions that construct circuit components as a side effect.
           The four functions you need to use to assemble your circuit are:
@@ -1713,7 +1732,7 @@ output = signal('zzz1z')`
               }</pre>
             </div>
           </div>
-        </p>
+        </div>
       </div>
     </div>;
   }

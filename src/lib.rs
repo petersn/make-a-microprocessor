@@ -11,6 +11,7 @@ const SUBSTEPS: u32 = 1;
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 static mut GLOBAL_INDICES: Vec<u32> = Vec::new();
+static mut GLOBAL_FIRST_SHOOT_THROUGH: i32 = -1;
 
 type Net = u32;
 
@@ -88,7 +89,7 @@ fn parse_pattern_var(x: &u32) -> DriveType {
 
 #[wasm_bindgen]
 pub fn init_panic_hook() {
-    console_error_panic_hook::set_once();
+  console_error_panic_hook::set_once();
 }
 
 // Performance optimizations to perform:
@@ -96,17 +97,25 @@ pub fn init_panic_hook() {
 //   2. Maybe have a dirty list, so I don't resimulate everything like every time.
 
 #[wasm_bindgen]
-pub fn perform_simulation(description: &[u32], net_count: u32, duration: u32, clock_divider: u32) -> Vec<u8> {
+pub fn perform_simulation(
+  description: &[u32],
+  nets_to_trace: &[u32],
+  net_count: u32,
+  duration: u32,
+  clock_divider: u32,
+) -> Vec<u8> {
   // We now unpack everything.
-  let mut streams: Vec<Vec<NetState>> = Vec::new();
-  for _ in 0..net_count {
-    streams.push(vec![NetState::Invalid]);
+  let mut first_shoot_through: i32 = -1;
+  let mut net_states: Vec<NetState> = vec![NetState::Invalid; net_count as usize];
+  let mut traces: Vec<Vec<NetState>> = Vec::new();
+  for _ in 0..nets_to_trace.len() {
+    traces.push(vec![NetState::Invalid]);
   }
-  let mut children: Vec<Vec<Net>> = vec![Vec::new(); net_count as usize];
-  let mut components_by_output_net: Vec<Vec<Component>> =
-    (0..net_count).into_iter().map(|x| Vec::new()).collect();
+  //let mut children: Vec<Vec<Net>> = vec![Vec::new(); net_count as usize];
+  //let mut components_by_output_net: Vec<Vec<Component>> =
+  //  (0..net_count).into_iter().map(|x| Vec::new()).collect();
   let mut components: Vec<Component> = Vec::new();
-  //let mut probe_list: Vec<Net> = Vec::new();
+  let mut dirty_bitmap: Vec<u64> = Vec::new();
 
   {
     let mut i: usize = 0;
@@ -119,8 +128,8 @@ pub fn perform_simulation(description: &[u32], net_count: u32, duration: u32, cl
           let source = description[i + 4];
           //components_by_output_net[drain as usize].push(Component::Fet{
           components.push(Component::Fet{is_pfet, gate, drain, source});
-          children[gate as usize].push(drain);
-          children[source as usize].push(drain);
+          //children[gate as usize].push(drain);
+          //children[source as usize].push(drain);
           i += 5;
         }
         2 => {
@@ -156,25 +165,6 @@ pub fn perform_simulation(description: &[u32], net_count: u32, duration: u32, cl
     }
   }
 
-  // Toposort the components.
-  /*
-  let mut unvisited = HashSet::<Net>::from_iter((0..net_count).into_iter());
-  let mut toposort = vec![];
-  for start_net in 0..net_count {
-    let mut stack = vec![start_net];
-    while let Some(net) = stack.pop() {
-      if unvisited.contains(&net) {
-        toposort.push(net);
-        unvisited.remove(&net);
-        for child in &children[net as usize] {
-          stack.push(*child);
-        }
-      }
-    }
-  }
-  //toposort.reverse();
-  */
-
   let mut drives = vec![DriveType::HighZ; net_count as usize];
 
   for t in 0..duration {
@@ -187,9 +177,9 @@ pub fn perform_simulation(description: &[u32], net_count: u32, duration: u32, cl
     for component in &components {
       match component {
         Component::Fet{is_pfet, gate, drain, source} => {
-          let gate_state   = streams[*gate   as usize][t as usize];
-          let drain_state  = streams[*drain  as usize][t as usize];
-          let source_state = streams[*source as usize][t as usize];
+          let gate_state   = net_states[*gate   as usize];
+          let drain_state  = net_states[*drain  as usize];
+          let source_state = net_states[*source as usize];
           match (*is_pfet, gate_state, source_state) {
             // Normal operation of nfets and pfets.
             (false, NetState::High, NetState::Low) =>
@@ -219,9 +209,10 @@ pub fn perform_simulation(description: &[u32], net_count: u32, duration: u32, cl
     }
 
     // Produce new values.
-    for net in 0..streams.len() {
-      let last = streams[net][t as usize];
-      streams[net].push(match (last, drives[net]) {
+    for net in 0..net_count {
+      //let last = streams[net][t as usize];
+      let last = net_states[net as usize];
+      let new_state = match (last, drives[net as usize]) {
         (NetState::ShootThrough, _) => NetState::ShootThrough,
         (_, DriveType::ShootThrough) => NetState::ShootThrough,
         (_, DriveType::HighZ) |
@@ -235,7 +226,19 @@ pub fn perform_simulation(description: &[u32], net_count: u32, duration: u32, cl
         (NetState::Invalid, DriveType::WeakLow) => NetState::Low,
         (NetState::Invalid, DriveType::WeakHigh) => NetState::High,
         _ => last,
-      });
+      };
+      net_states[net as usize] = new_state;
+      if first_shoot_through == -1 {
+        match new_state {
+          NetState::ShootThrough => first_shoot_through = t as i32,
+          _ => (),
+        }
+      }
+    }
+
+    // Save the ones that are being probed.
+    for (i, &net) in nets_to_trace.iter().enumerate() {
+      traces[i].push(net_states[net as usize]);
     }
   }
 
@@ -243,22 +246,27 @@ pub fn perform_simulation(description: &[u32], net_count: u32, duration: u32, cl
   let mut indices: Vec<u32> = Vec::new();
 
   // Pack up our results.
-  for net in 0..net_count {
+  for trace in traces {
     indices.push(bytes.len() as u32);
-    indices.push(streams[net as usize].len() as u32);
-    for val in &streams[net as usize] {
-      bytes.push(*val as u8);
+    indices.push(trace.len() as u32);
+    for val in trace {
+      bytes.push(val as u8);
     }
-    //bytes.extend((streams[net as usize] as Vec<u8>).iter());
   }
 
   unsafe { GLOBAL_INDICES = indices; }
+  unsafe { GLOBAL_FIRST_SHOOT_THROUGH = first_shoot_through; }
   bytes
 }
 
 #[wasm_bindgen]
 pub fn get_indices() -> Vec<u32> {
   unsafe { GLOBAL_INDICES.clone() }
+}
+
+#[wasm_bindgen]
+pub fn get_first_shoot_through() -> i32 {
+  unsafe { GLOBAL_FIRST_SHOOT_THROUGH }
 }
 
 /*

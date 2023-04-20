@@ -6,6 +6,7 @@ import 'codemirror/theme/material.css';
 import 'codemirror/mode/python/python';
 import RawCodeMirror from 'codemirror';
 import SplitPane from 'react-split-pane';
+import { IGrading, ILevel, globalLevelsList } from './Levels';
 
 import init, {
   get_indices,

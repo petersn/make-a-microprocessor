@@ -1,0 +1,8 @@
+
+[*] Fix up performance issue where each text area update rerenders the whole app
+[ ] Add zoom and scroll features 
+[X] Switch the Rust component to use flags, then merge up drives at the end of the step -- This ultimately seemed to maybe not be a win.
+[ ] Switch the Rust component to use a dirty list
+[*] Switch Rust to only return data for nets we care about
+[*] Add SRAM to simulator
+
